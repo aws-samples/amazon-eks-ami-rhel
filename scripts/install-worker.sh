@@ -52,8 +52,8 @@ fi
 ### Utilities ##################################################################
 ################################################################################
 
-sudo chmod -R a+x $TEMPLATE_DIR/bin/
-sudo mv $TEMPLATE_DIR/bin/* /usr/bin/
+# sudo chmod -R a+x $TEMPLATE_DIR/bin/
+# sudo mv $TEMPLATE_DIR/bin/* /usr/bin/
 
 ################################################################################
 ### Packages ###################################################################
@@ -67,6 +67,7 @@ sudo yum install -y \
   chrony \
   conntrack \
   curl \
+  iptables \
   ipvsadm \
   jq \
   nfs-utils \
@@ -134,7 +135,9 @@ sudo mv $TEMPLATE_DIR/iptables-restore.service /etc/eks/iptables-restore.service
 ### awscli #####################################################
 ################################################################################
 
-if [[ "$BINARY_BUCKET_REGION" != "us-iso-east-1" && "$BINARY_BUCKET_REGION" != "us-isob-east-1" && "$INSTALL_AWS_CLI" == "true" ]]; then
+### isolated regions can't communicate to awscli.amazonaws.com so installing awscli through yum
+ISOLATED_REGIONS=(us-iso-east-1 us-iso-west-1 us-isob-east-1)
+if ! [[ " ${ISOLATED_REGIONS[*]} " =~ " ${BINARY_BUCKET_REGION} " ]]; then
   # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
   echo "Installing awscli v2 bundle"
   AWSCLI_DIR=$(mktemp -d)
@@ -145,14 +148,7 @@ if [[ "$BINARY_BUCKET_REGION" != "us-iso-east-1" && "$BINARY_BUCKET_REGION" != "
     --retry-delay 1 \
     -L "https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip" -o "${AWSCLI_DIR}/awscliv2.zip"
   unzip -q "${AWSCLI_DIR}/awscliv2.zip" -d ${AWSCLI_DIR}
-  sudo "${AWSCLI_DIR}/aws/install" --bin-dir /bin/
-elif [[ "$INSTALL_AWS_CLI" == "true" ]]; then
-  echo "Installing awscli package"
-  sudo yum install -y awscli
-fi
-
-if [[ "$SET_AWS_REGION" == "true" ]]; then
-  sudo aws configure set region $AWS_REGION --profile default
+  sudo "${AWSCLI_DIR}/aws/install" --bin-dir /bin/ --update
 fi
 
 ################################################################################
@@ -282,7 +278,7 @@ BINARIES=(
   aws-iam-authenticator
 )
 for binary in ${BINARIES[*]}; do
-  if [[ "$USE_AWS_CLI" == "true" && $(command -v aws) >/dev/null ]]; then
+  if [[ -v "USE_AWS_CLI" && $(command -v aws) >/dev/null ]]; then
     echo "AWS cli present - using it to copy binaries from s3."
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary .
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary.sha256 .
@@ -316,7 +312,7 @@ if [ "$PULL_CNI_FROM_GITHUB" = "true" ]; then
   sudo sha512sum -c "${CNI_PLUGIN_FILENAME}.tgz.sha512"
   sudo rm "${CNI_PLUGIN_FILENAME}.tgz.sha512"
 else
-  if [[ "$USE_AWS_CLI" == "true" && $(command -v aws) >/dev/null ]]; then
+  if [[ -v "USE_AWS_CLI"  && $(command -v aws) >/dev/null ]]; then
     echo "AWS cli present - using it to copy binaries from s3."
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz .
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz.sha256 .
@@ -390,7 +386,7 @@ echo "EKS configuration installed"
 ################################################################################
 if vercmp "$KUBERNETES_VERSION" gteq "1.22.0"; then
   ECR_BINARY="ecr-credential-provider"
-  if [[ "$USE_AWS_CLI" == "true" && $(command -v aws) >/dev/null ]]; then
+  if [[ -v "USE_AWS_CLI"  && $(command -v aws) >/dev/null ]]; then
     echo "AWS cli present - using it to copy ecr-credential-provider binaries from s3."
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_BINARY .
   else
@@ -518,7 +514,7 @@ fi
 ### SSM Agent ##################################################################
 ################################################################################
 
-if [[ "$INSTALL_SSM_AGENT" == "true" ]]; then
+if [[ -v "INSTALL_SSM_AGENT" ]]; then
   sudo yum install -y "https://amazon-ssm-$BINARY_BUCKET_REGION.s3.$BINARY_BUCKET_REGION.amazonaws.com/latest/linux_amd64/amazon-ssm-agent.rpm"
   sudo systemctl enable amazon-ssm-agent
   sudo systemctl start amazon-ssm-agent
@@ -560,7 +556,7 @@ echo vm.max_map_count=524288 | sudo tee -a /etc/sysctl.conf
 ### adding log-collector-script ################################################
 ################################################################################
 sudo mkdir -p /etc/eks/log-collector-script/
-sudo cp $TEMPLATE_DIR/log-collector-script/linux/eks-log-collector.sh /etc/eks/log-collector-script/
+sudo cp $TEMPLATE_DIR/log-collector-script/eks-log-collector.sh /etc/eks/log-collector-script/
 
 ################################################################################
 ### Remove Yum Update from cloud-init config ###################################
@@ -572,9 +568,14 @@ sudo sed -i \
 ################################################################################
 ### Change SELinux context for binaries ########################################
 ################################################################################
-sudo chcon -R -t bin_t /etc/eks
-sudo chcon -t kubelet_exec_t /usr/bin/kubelet
-sudo chcon -t bin_t /usr/bin/aws-iam-authenticator
+#sudo chcon -R -t bin_t /etc/eks
+sudo semanage fcontext -a -t bin_t -s system_u "/etc/eks(/.*)?"
+sudo restorecon -R -vF /etc/eks
+#sudo chcon -t kubelet_exec_t /usr/bin/kubelet
+sudo semanage fcontext -a -t kubelet_exec_t -s system_u /usr/bin/kubelet
+sudo restorecon -vF /usr/bin/kubelet
+sudo semanage fcontext -a -t bin_t -s system_u /usr/bin/aws-iam-authenticator
+sudo restorecon -vF /usr/bin/aws-iam-authenticator
 
 echo "**************************************************************"
 echo "All Done!"

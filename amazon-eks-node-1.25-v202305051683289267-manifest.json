@@ -1,0 +1,17 @@
+{
+  "builds": [
+    {
+      "name": "amazon-ebs",
+      "builder_type": "amazon-ebs",
+      "build_time": 1683290216,
+      "files": null,
+      "artifact_id": "us-gov-east-1:ami-0d878a44ecfbb4fcf",
+      "packer_run_uuid": "bcbbbae2-452f-0525-7f47-0b9e4935efb5",
+      "custom_data": {
+        "source_ami_id": "ami-0715b68c61734ebbf",
+        "source_ami_name": "RHEL_STIG2023-03-21T02-10-53.983Z"
+      }
+    }
+  ],
+  "last_run_uuid": "bcbbbae2-452f-0525-7f47-0b9e4935efb5"
+}

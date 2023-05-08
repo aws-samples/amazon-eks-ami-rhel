@@ -1,5 +1,5 @@
 PACKER_BINARY ?= packer
-AVAILABLE_PACKER_VARIABLES := $(shell $(PACKER_BINARY) inspect -machine-readable eks-worker-al2.json | grep 'template-variable' | awk -F ',' '{print $$4}')
+AVAILABLE_PACKER_VARIABLES := $(shell $(PACKER_BINARY) inspect -machine-readable eks-worker-rhel.json | grep 'template-variable' | awk -F ',' '{print $$4}')
 
 K8S_VERSION_PARTS := $(subst ., ,$(kubernetes_version))
 K8S_VERSION_MINOR := $(word 1,${K8S_VERSION_PARTS}).$(word 2,${K8S_VERSION_PARTS})
@@ -19,8 +19,8 @@ ifeq ($(arch), arm64)
 instance_type ?= m6g.large
 ami_name ?= amazon-eks-arm64-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d')
 else
-instance_type ?= m4.large
-ami_name ?= amazon-eks-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d')
+instance_type ?= t3.large
+ami_name ?= amazon-eks-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d%s')
 endif
 
 ifeq ($(aws_region), cn-northwest-1)
@@ -73,18 +73,18 @@ test: ## run the test-harness
 
 # include only variables which have a defined value
 PACKER_VARIABLES := $(foreach packerVar,$(AVAILABLE_PACKER_VARIABLES),$(if $($(packerVar)),$(packerVar)))
-PACKER_VAR_FLAGS := -var-file eks-worker-al2-variables.json \
+PACKER_VAR_FLAGS := -var-file eks-worker-rhel-gov-variables.json \
 $(if $(PACKER_VARIABLE_FILE),--var-file=$(PACKER_VARIABLE_FILE),) \
 $(foreach packerVar,$(PACKER_VARIABLES),-var $(packerVar)='$($(packerVar))')
 
 .PHONY: validate
 validate: ## Validate packer config
-	$(PACKER_BINARY) validate $(PACKER_VAR_FLAGS) eks-worker-al2.json
+	$(PACKER_BINARY) validate $(PACKER_VAR_FLAGS) eks-worker-rhel.json
 
 .PHONY: k8s
 k8s: validate ## Build default K8s version of EKS Optimized AL2 AMI
 	@echo "$(T_GREEN)Building AMI for version $(T_YELLOW)$(kubernetes_version)$(T_GREEN) on $(T_YELLOW)$(arch)$(T_RESET)"
-	$(PACKER_BINARY) build -timestamp-ui -color=false $(PACKER_VAR_FLAGS) eks-worker-al2.json
+	$(PACKER_BINARY) build -timestamp-ui -color=false $(PACKER_VAR_FLAGS) eks-worker-rhel.json
 
 # Build dates and versions taken from https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
 
@@ -106,7 +106,7 @@ k8s: validate ## Build default K8s version of EKS Optimized AL2 AMI
 
 .PHONY: 1.25
 1.25: ## Build EKS Optimized AL2 AMI - K8s 1.25
-	$(MAKE) k8s kubernetes_version=1.25.6 kubernetes_build_date=2023-01-30 pull_cni_from_github=true
+	$(MAKE) k8s kubernetes_version=1.25.6 kubernetes_build_date=2023-01-30 pull_cni_from_github=true aws_region=us-gov-east-1
 
 .PHONY: help
 help: ## Display help
