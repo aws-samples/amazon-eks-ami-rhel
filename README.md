@@ -93,7 +93,7 @@ The Makefile chooses a particular kubelet binary to use per Kubernetes version w
 > The default instance type to build this AMI does not qualify for the AWS free tier.
 > You are charged for any instances created when building this AMI.
 
-**Note**
+> **Note**
 > This has been tested on RHEL 8.6+ and RHEL 9+ images with 80+ DISA STIG SCAP scores.
 
 ## 🔒 Security
