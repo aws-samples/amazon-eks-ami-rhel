@@ -89,11 +89,12 @@ make 1.25 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*
 
 The Makefile chooses a particular kubelet binary to use per Kubernetes version which you can [view here](Makefile).
 
-**Note**
-The default instance type to build this AMI does not qualify for the AWS free tier. You are charged for any instances created when building this AMI.
+> **Note**
+> The default instance type to build this AMI does not qualify for the AWS free tier.
+> You are charged for any instances created when building this AMI.
 
 **Note**
-This has been tested on RHEL 8.6+ and RHEL 9+ images with 80+ DISA STIG SCAP scores.
+> This has been tested on RHEL 8.6+ and RHEL 9+ images with 80+ DISA STIG SCAP scores.
 
 ## 🔒 Security
 
