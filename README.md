@@ -1,54 +1,99 @@
 # Amazon EKS AMI RHEL Build Specification
 
-This repository contains resources and configuration scripts for building a
-custom Amazon EKS AMI running on Red Hat Enterprise Linux. This is a forked version of the configuration that Amazon EKS uses to create the official Amazon
-EKS-optimized AMI.
+This repository contains resources and configuration scripts for building a custom Amazon EKS AMI running on Red Hat Enterprise Linux using [HashiCorp Packer](https://www.packer.io/). This is a forked version of the configuration that Amazon EKS uses to create the official Amazon EKS-optimized AMI.
 
 **Check out the AMI's [user guide](doc/USER_GUIDE.md) for more information.**
 
 ## 🚀 Getting started
 
-If you are new to Amazon EKS, we recommend that you follow
-our [Getting Started](https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html)
-chapter in the Amazon EKS User Guide. If you already have a cluster, and you
-want to launch a node group with your new AMI, see [Launching Amazon EKS Worker
-Nodes](https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html).
+If you are new to Amazon EKS, we recommend that you follow our [Getting Started](https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html) chapter in the Amazon EKS User Guide. If you already have a cluster, and you want to launch a node group with your new AMI, see [Launching Amazon EKS Worker Nodes](https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html).
 
 ## 🔢 Pre-requisites
 
 * RHEL image of your choosing.
 * Internet connectivity from EC2 for file downloads OR files stored locally in S3 bucket.
+* You must have [Packer](https://www.packer.io/) version 1.8.0 or later installed on your local system, an EC2 Instance in AWS, or in [AWS CloudShell](https://aws.amazon.com/cloudshell/). For more information, see [Installing Packer](https://www.packer.io/docs/install/index.html) in the Packer documentation.
+* You must also have AWS account credentials configured so that Packer can make calls to AWS API operations on your behalf. For more information, see [Authentication](https://www.packer.io/docs/builders/amazon.html#specifying-amazon-credentials) in the Packer documentation.
+* We recommend using AWS CloudShell
+
+## 🪪 Minimal Packer IAM Permissions
+```bash
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:CopyImage",
+        "ec2:CreateImage",
+        "ec2:CreateKeypair",
+        "ec2:CreateSecurityGroup",
+        "ec2:CreateSnapshot",
+        "ec2:CreateTags",
+        "ec2:CreateVolume",
+        "ec2:DeleteKeyPair",
+        "ec2:DeleteSecurityGroup",
+        "ec2:DeleteSnapshot",
+        "ec2:DeleteVolume",
+        "ec2:DeregisterImage",
+        "ec2:DescribeImageAttribute",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeRegions",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeTags",
+        "ec2:DescribeVolumes",
+        "ec2:DetachVolume",
+        "ec2:GetPasswordData",
+        "ec2:ModifyImageAttribute",
+        "ec2:ModifyInstanceAttribute",
+        "ec2:ModifySnapshotAttribute",
+        "ec2:RegisterImage",
+        "ec2:RunInstances",
+        "ec2:StopInstances",
+        "ec2:TerminateInstances"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+## ⚙️ Installing Packer in CloudShell
+```bash
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+sudo yum -y install packer
+```
+
+## 🗂️ Cloning the Github repository
+```bash
+git clone https://github.com/aws-samples/amazon-eks-ami-rhel.git
+```
 
 ## 👷 Building the AMI
 
-1. Launch an EC2 instance from the base AMI you would like to build from. In your EC2 instance User Data script, pull down the github repository and copy files to a temp directory for execution. See User Data bash script below, which is for an instance launched in the AWS GovCloud us-gov-east-1 region.
+A Makefile is provided to build the Amazon EKS Worker AMI, but it is just a small wrapper around invoking Packer directly. You can initiate the build process by running the following command in the root of this repository:
 ```bash
-#!/bin/bash
+# Example for building an image off of the default RHEL AMI for Kubernetes version 1.25
+make 1.25
 
-yum install -y https://amazon-ssm-us-gov-east-1.s3.us-gov-east-1.amazonaws.com/latest/linux_amd64/amazon-ssm-agent.rpm
-systemctl enable amazon-ssm-agent
-systemctl start amazon-ssm-agent
-
-yum install -y git
-cd /home/ec2-user
-git clone https://github.com/aws-samples/amazon-eks-ami-rhel
-mkdir -p /tmp/worker
-cp -r /home/ec2-user/amazon-eks-rhel-ami/scripts /tmp/
-cp -r /home/ec2-user/amazon-eks-rhel-ami/files/* /tmp/worker/
-cp -r /home/ec2-user/amazon-eks-rhel-ami/log-collector-script /tmp/worker/
+# Example for building a customized DISA STIG compliant AMI, owned by a specific AWS Account in AWS GovCloud:
+make 1.25 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_region=us-gov-east-1 aws_region=us-gov-east-1
 ```
 
-2. Terminal into your new instance and kickoff the /tmp/scripts/install-worker.sh bash script that should have been copied over as part of your User Data script in step 1. Example launch command:
-```bash
-KUBERNETES_VERSION=1.24.7 BINARY_BUCKET_NAME=amazon-eks BINARY_BUCKET_REGION=us-west-2 KUBERNETES_BUILD_DATE=2022-10-31 DOCKER_VERSION=ce-3:23.0.1-1.el8.x86_64 CONTAINERD_VERSION=1.6.16-3.1.el7 RUNC_VERSION=1:1.1.4-1.module+el8.7.0+17498+a7f63b89 INSTALL_DOCKER=true CNI_PLUGIN_VERSION=v0.8.6 PULL_CNI_FROM_GITHUB=true PAUSE_CONTAINER_VERSION=3.5 CACHE_CONTAINER_IMAGES=false USE_AWS_CLI=false SONOBUOY_E2E_REGISTRY= INSTALL_AWS_CLI=false bash /tmp/scripts/install-worker.sh
-```
-Note: If the AWS CLI and SSM Agent are not already installed, pass in the INSTALL_AWS_CLI and INSTALL_SSM_AGENT variables set to true.
+The Makefile chooses a particular kubelet binary to use per Kubernetes version which you can [view here](Makefile).
 
 **Note**
 The default instance type to build this AMI does not qualify for the AWS free tier. You are charged for any instances created when building this AMI.
 
 **Note**
-This has been tested on RHEL 8.6 and RHEL 8.7 images with 80+ DISA STIG SCAP scores.
+This has been tested on RHEL 8.6+ and RHEL 9+ images with 80+ DISA STIG SCAP scores.
 
 ## 🔒 Security
 
@@ -58,3 +103,6 @@ For security issues or concerns, please do not open an issue or pull request on 
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
 
+## 📝 Legal Disclaimer
+
+The sample code; software libraries; command line tools; proofs of concept; templates; or other related technology (including any of the foregoing that are provided by our personnel) is provided to you as AWS Content under the AWS Customer Agreement, or the relevant written agreement between you and AWS (whichever applies). You should not use this AWS Content in your production accounts, or on production or other critical data. You are responsible for testing, securing, and optimizing the AWS Content, such as sample code, as appropriate for production grade use based on your specific quality control practices and standards. Deploying AWS Content may incur AWS charges for creating or using AWS chargeable resources, such as running Amazon EC2 instances or using Amazon S3 storage.

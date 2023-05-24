@@ -49,13 +49,6 @@ else
 fi
 
 ################################################################################
-### Utilities ##################################################################
-################################################################################
-
-# sudo chmod -R a+x $TEMPLATE_DIR/bin/
-# sudo mv $TEMPLATE_DIR/bin/* /usr/bin/
-
-################################################################################
 ### Packages ###################################################################
 ################################################################################
 
@@ -178,12 +171,6 @@ else
   sudo mv $TEMPLATE_DIR/containerd-config.toml /etc/eks/containerd/containerd-config.toml
 fi
 
-if vercmp "$KUBERNETES_VERSION" gteq "1.22.0"; then
-  # enable CredentialProviders features in kubelet-containerd service file
-  IMAGE_CREDENTIAL_PROVIDER_FLAGS='\\\n    --image-credential-provider-config /etc/eks/ecr-credential-provider/ecr-credential-provider-config \\\n   --image-credential-provider-bin-dir /etc/eks/ecr-credential-provider'
-  sudo sed -i s,"aws","aws $IMAGE_CREDENTIAL_PROVIDER_FLAGS", $TEMPLATE_DIR/kubelet-containerd.service
-fi
-
 sudo mv $TEMPLATE_DIR/kubelet-containerd.service /etc/eks/containerd/kubelet-containerd.service
 sudo mv $TEMPLATE_DIR/sandbox-image.service /etc/eks/containerd/sandbox-image.service
 sudo mv $TEMPLATE_DIR/pull-sandbox-image.sh /etc/eks/containerd/pull-sandbox-image.sh
@@ -265,7 +252,7 @@ echo "Downloading binaries from: s3://$BINARY_BUCKET_NAME"
 S3_DOMAIN="amazonaws.com"
 if [ "$BINARY_BUCKET_REGION" = "cn-north-1" ] || [ "$BINARY_BUCKET_REGION" = "cn-northwest-1" ]; then
   S3_DOMAIN="amazonaws.com.cn"
-elif [ "$BINARY_BUCKET_REGION" = "us-iso-east-1" ]; then
+elif [ "$BINARY_BUCKET_REGION" = "us-iso-east-1" ] || [ "$BINARY_BUCKET_REGION" = "us-iso-west-1" ]; then
   S3_DOMAIN="c2s.ic.gov"
 elif [ "$BINARY_BUCKET_REGION" = "us-isob-east-1" ]; then
   S3_DOMAIN="sc2s.sgov.gov"
@@ -340,15 +327,6 @@ if [[ $KUBERNETES_VERSION == "1.20"* ]]; then
   echo $KUBELET_CONFIG_WITH_CSI_SERVICE_ACCOUNT_TOKEN_ENABLED > $TEMPLATE_DIR/kubelet-config.json
 fi
 
-if vercmp "$KUBERNETES_VERSION" gteq "1.22.0"; then
-  # enable CredentialProviders feature flags in kubelet service file
-  IMAGE_CREDENTIAL_PROVIDER_FLAGS='\\\n    --image-credential-provider-config /etc/eks/ecr-credential-provider/ecr-credential-provider-config \\\n    --image-credential-provider-bin-dir /etc/eks/ecr-credential-provider'
-  sudo sed -i s,"aws","aws $IMAGE_CREDENTIAL_PROVIDER_FLAGS", $TEMPLATE_DIR/kubelet.service
-  # enable KubeletCredentialProviders features in kubelet configuration
-  KUBELET_CREDENTIAL_PROVIDERS_FEATURES=$(cat $TEMPLATE_DIR/kubelet-config.json | jq '.featureGates += {KubeletCredentialProviders: true}')
-  printf "%s" "$KUBELET_CREDENTIAL_PROVIDERS_FEATURES" | sudo tee "$TEMPLATE_DIR/kubelet-config.json"
-fi
-
 sudo mv $TEMPLATE_DIR/kubelet.service /etc/systemd/system/kubelet.service
 sudo chown root:root /etc/systemd/system/kubelet.service
 sudo mv $TEMPLATE_DIR/kubelet-config.json /etc/kubernetes/kubelet/kubelet-config.json
@@ -377,34 +355,27 @@ if [[ -n "$SONOBUOY_E2E_REGISTRY" ]]; then
   sudo sed -i s,SONOBUOY_E2E_REGISTRY,$SONOBUOY_E2E_REGISTRY,g /etc/eks/sonobuoy-e2e-registry-config
 fi
 
-sudo mkdir -p /etc/eks/ecr-credential-provider
-sudo cp $TEMPLATE_DIR/ecr-credential-provider-config /etc/eks/ecr-credential-provider/ecr-credential-provider-config
-echo "EKS configuration installed"
-
 ################################################################################
 ### ECR CREDENTIAL PROVIDER ####################################################
 ################################################################################
-if vercmp "$KUBERNETES_VERSION" gteq "1.22.0"; then
-  ECR_BINARY="ecr-credential-provider"
-  if [[ -v "USE_AWS_CLI"  && $(command -v aws) >/dev/null ]]; then
-    echo "AWS cli present - using it to copy ecr-credential-provider binaries from s3."
-    aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_BINARY .
-  else
-    echo "AWS cli missing - using wget to fetch ecr-credential-provider binaries from s3. Note: This won't work for private bucket."
-    sudo wget "$S3_URL_BASE/$ECR_BINARY" -q
-  fi
-  sudo chmod +x $ECR_BINARY
-  sudo mkdir -p /etc/eks/ecr-credential-provider
-  sudo mv $ECR_BINARY /etc/eks/ecr-credential-provider
-
-  # copying credential provider config file to eks folder
-  sudo cp $TEMPLATE_DIR/ecr-credential-provider-config /etc/eks/ecr-credential-provider/ecr-credential-provider-config
+ECR_CREDENTIAL_PROVIDER_BINARY="ecr-credential-provider"
+if [[ -v "USE_AWS_CLI"  && $(command -v aws) >/dev/null ]]; then
+  echo "AWS cli present - using it to copy ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3."
+  aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
+else
+  echo "AWS cli missing - using wget to fetch ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3. Note: This won't work for private bucket."
+  sudo wget "$S3_URL_BASE/$ECR_CREDENTIAL_PROVIDER_BINARY"
 fi
+sudo chmod +x $ECR_CREDENTIAL_PROVIDER_BINARY
+sudo mkdir -p /etc/eks/image-credential-provider
+sudo mv $ECR_CREDENTIAL_PROVIDER_BINARY /etc/eks/image-credential-provider/
+sudo mv $TEMPLATE_DIR/ecr-credential-provider-config.json /etc/eks/image-credential-provider/config.json
 
 ################################################################################
 ### Cache Images ###############################################################
 ################################################################################
-if [[ "$CACHE_CONTAINER_IMAGES" == "true" && "$BINARY_BUCKET_REGION" != "us-iso-east-1" && "$BINARY_BUCKET_REGION" != "us-isob-east-1" ]]; then
+
+if [[ "$CACHE_CONTAINER_IMAGES" == "true" ]] && ! [[ " ${ISOLATED_REGIONS[*]} " =~ " ${BINARY_BUCKET_REGION} " ]]; then
   AWS_DOMAIN=$(imds 'latest/meta-data/services/domain')
   ECR_URI=$(/etc/eks/get-ecr-uri.sh "${BINARY_BUCKET_REGION}" "${AWS_DOMAIN}")
 
@@ -568,10 +539,8 @@ sudo sed -i \
 ################################################################################
 ### Change SELinux context for binaries ########################################
 ################################################################################
-#sudo chcon -R -t bin_t /etc/eks
 sudo semanage fcontext -a -t bin_t -s system_u "/etc/eks(/.*)?"
 sudo restorecon -R -vF /etc/eks
-#sudo chcon -t kubelet_exec_t /usr/bin/kubelet
 sudo semanage fcontext -a -t kubelet_exec_t -s system_u /usr/bin/kubelet
 sudo restorecon -vF /usr/bin/kubelet
 sudo semanage fcontext -a -t bin_t -s system_u /usr/bin/aws-iam-authenticator
