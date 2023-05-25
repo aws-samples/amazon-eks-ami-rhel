@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-set -o pipefail
-set -o nounset
-set -o errexit
+# Not executing this script as part of RHEL AMI build.
+# set -o pipefail
+# set -o nounset
+# set -o errexit
 
 # if [[ -z "$KERNEL_VERSION" ]]; then
 #   if vercmp "$KUBERNETES_VERSION" gteq "1.24.0"; then

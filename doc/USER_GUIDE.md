@@ -8,7 +8,7 @@ This document includes details about using the AMI template and the resulting AM
 1. [Container image caching](#container-image-caching)
 1. [IAM permissions](#iam-permissions)
 1. [Customizing kubelet config](#customizing-kubelet-config)
-1. [AL2 and Linux kernel information](#al2-and-linux-kernel-information)
+1. [RHEL and Linux kernel information](#rhel-and-linux-kernel-information)
 1. [Updating known instance types](#updating-known-instance-types)
 1. [Version-locked packages](#version-locked-packages)
 1. [Image credential provider plugins](#image-credential-provider-plugins)
@@ -18,7 +18,7 @@ This document includes details about using the AMI template and the resulting AM
 
 ## AMI template variables
 
-Default values for most variables are defined in [a default variable file](eks-worker-al2-variables.json).
+Default values for most variables are defined in [a default variable file](eks-worker-rhel-variables.json).
 
 Users have the following options for specifying their own values:
 
@@ -82,7 +82,7 @@ make k8s \
 ```
 **Note**: Confirm that the binary_bucket_name, binary_bucket_region, kubernetes_version, and kubernetes_build_date parameters match the path to your binaries in Amazon S3.
 
-The Makefile runs Packer with the `eks-worker-al2.json` build specification
+The Makefile runs Packer with the `eks-worker-rhel.json` build specification
 template and the [amazon-ebs](https://www.packer.io/docs/builders/amazon-ebs.html)
 builder. An instance is launched and the Packer [Shell
 Provisioner](https://www.packer.io/docs/provisioners/shell.html) runs the
@@ -219,7 +219,7 @@ echo "$(jq ".registryPullQPS=20 | .registryBurst=40" /etc/kubernetes/kubelet/kub
 There are a couple of important caveats here:
 
 1. If you update the `kubelet` config file after `kubelet` has already started (i.e. `bootstrap.sh` already ran), you'll need to restart `kubelet` to pick up the latest configuration.
-2. [bootstrap.sh](https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh) does modify a few fields, like `kubeReserved` and `evictionHard`, so you'd need to modify the config after the bootstrap script is run and restart `kubelet` to overwrite those properties.
+2. [bootstrap.sh](https://github.com/aws-samples/amazon-eks-ami-rhel/blob/main/files/bootstrap.sh) does modify a few fields, like `kubeReserved` and `evictionHard`, so you'd need to modify the config after the bootstrap script is run and restart `kubelet` to overwrite those properties.
 
 **View active kubelet config**
 
@@ -248,9 +248,9 @@ $ curl -sSL "http://localhost:8001/api/v1/nodes/ip-192-168-92-220.us-east-2.comp
 
 ---
 
-## AL2 and Linux Kernel Information
+## RHEL and Linux Kernel Information
 
-By default, the `amazon-eks-ami` uses a [source_ami_filter](https://github.com/awslabs/amazon-eks-ami/blob/e3f1b910f83ad1f27e68312e50474ea6059f052d/eks-worker-al2.json#L46) that selects the latest [hvm](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/virtualization_types.html) AL2 AMI for the given architecture as the base AMI. For more information on what kernel versions are running on published Amazon EKS optimized Linux AMIs, see [the public documentation](https://docs.aws.amazon.com/eks/latest/userguide/eks-linux-ami-versions.html).
+By default, the `amazon-eks-ami` uses a [source_ami_filter](https://github.com/aws-samples/amazon-eks-ami-rhel/blob/main/eks-worker-rhel.json#L46) that selects the latest [hvm](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/virtualization_types.html) RHEL AMI for the given architecture as the base AMI. For more information on what kernel versions are running on published Amazon EKS optimized Linux AMIs, see [the public documentation](https://docs.aws.amazon.com/eks/latest/userguide/eks-linux-ami-versions.html).
 
 When building an AMI, you can set `kernel_version` to customize the kernel version. Valid values are:
 - `4.14`

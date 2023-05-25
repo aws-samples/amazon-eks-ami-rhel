@@ -1,8 +1,8 @@
 MAKEFILE_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-PACKER_DEFAULT_VARIABLE_FILE ?= $(MAKEFILE_DIR)/eks-worker-al2-variables.json
-PACKER_TEMPLATE_FILE ?= $(MAKEFILE_DIR)/eks-worker-al2.json
-PACKER_BINARY ?= packer
+PACKER_DEFAULT_VARIABLE_FILE ?= $(MAKEFILE_DIR)/eks-worker-rhel-variables.json
+PACKER_TEMPLATE_FILE ?= $(MAKEFILE_DIR)/eks-worker-rhel.json
+PACKER_BINARY ?= /usr/bin/packer
 AVAILABLE_PACKER_VARIABLES := $(shell $(PACKER_BINARY) inspect -machine-readable $(PACKER_TEMPLATE_FILE) | grep 'template-variable' | awk -F ',' '{print $$4}')
 
 K8S_VERSION_PARTS := $(subst ., ,$(kubernetes_version))
@@ -47,7 +47,7 @@ ifeq ($(arch), arm64)
 	ami_name ?= amazon-eks-arm64-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d')
 else
 	instance_type ?= t3.large
-	ami_name ?= amazon-eks-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d')
+	ami_name ?= amazon-eks-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d%s')
 endif
 
 ifeq ($(aws_region), cn-northwest-1)
@@ -55,7 +55,11 @@ ifeq ($(aws_region), cn-northwest-1)
 endif
 
 ifeq ($(aws_region), us-gov-west-1)
-	source_ami_owners ?= 045324592363
+	source_ami_owners ?= 219670896067
+endif
+
+ifeq ($(aws_region), us-gov-east-1)
+	source_ami_owners ?= 219670896067
 endif
 
 T_RED := \e[0;31m
@@ -64,7 +68,7 @@ T_YELLOW := \e[0;33m
 T_RESET := \e[0m
 
 .PHONY: latest
-latest: 1.26 ## Build EKS Optimized AL2 AMI with the latest supported version of Kubernetes
+latest: 1.26 ## Build EKS Optimized RHEL AMI with the latest supported version of Kubernetes
 
 # ensure that these flags are equivalent to the rules in the .editorconfig
 SHFMT_FLAGS := --list \
@@ -109,30 +113,30 @@ validate: ## Validate packer config
 	$(PACKER_BINARY) validate $(PACKER_VAR_FLAGS) $(PACKER_TEMPLATE_FILE)
 
 .PHONY: k8s
-k8s: validate ## Build default K8s version of EKS Optimized AL2 AMI
+k8s: validate ## Build default K8s version of EKS Optimized RHEL AMI
 	@echo "$(T_GREEN)Building AMI for version $(T_YELLOW)$(kubernetes_version)$(T_GREEN) on $(T_YELLOW)$(arch)$(T_RESET)"
 	$(PACKER_BINARY) build -timestamp-ui -color=false $(PACKER_VAR_FLAGS) $(PACKER_TEMPLATE_FILE)
 
 # Build dates and versions taken from https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
 
 .PHONY: 1.22
-1.22: ## Build EKS Optimized AL2 AMI - K8s 1.22
+1.22: ## Build EKS Optimized RHEL AMI - K8s 1.22
 	$(MAKE) k8s kubernetes_version=1.22.17 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
 
 .PHONY: 1.23
-1.23: ## Build EKS Optimized AL2 AMI - K8s 1.23
+1.23: ## Build EKS Optimized RHEL AMI - K8s 1.23
 	$(MAKE) k8s kubernetes_version=1.23.17 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
 
 .PHONY: 1.24
-1.24: ## Build EKS Optimized AL2 AMI - K8s 1.24
+1.24: ## Build EKS Optimized RHEL AMI - K8s 1.24
 	$(MAKE) k8s kubernetes_version=1.24.11 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
 
 .PHONY: 1.25
-1.25: ## Build EKS Optimized AL2 AMI - K8s 1.25
-	$(MAKE) k8s kubernetes_version=1.25.7 kubernetes_build_date=2023-03-17 pull_cni_from_github=true aws_region=us-gov-east-1
+1.25: ## Build EKS Optimized RHEL AMI - K8s 1.25
+	$(MAKE) k8s kubernetes_version=1.25.7 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
 
 .PHONY: 1.26
-1.26: ## Build EKS Optimized AL2 AMI - K8s 1.26
+1.26: ## Build EKS Optimized RHEL AMI - K8s 1.26
 	$(MAKE) k8s kubernetes_version=1.26.2 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
 
 .PHONY: clean

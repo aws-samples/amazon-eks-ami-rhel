@@ -474,7 +474,7 @@ if [[ "$CACHE_CONTAINER_IMAGES" == "true" ]] && ! [[ " ${ISOLATED_REGIONS[*]} " 
       regional_img="${img/$BINARY_BUCKET_REGION/$region}"
       sudo ctr -n k8s.io image tag "${img}" "${regional_img}" || :
       ## Tag ECR fips endpoint for supported regions
-      if [[ "${region}" =~ (us-east-1|us-east-2|us-west-1|us-west-2|us-gov-east-1|us-gov-east-2) ]]; then
+      if [[ "${region}" =~ (us-east-1|us-east-2|us-west-1|us-west-2|us-gov-east-1|us-gov-west-1) ]]; then
         regional_fips_img="${regional_img/.ecr./.ecr-fips.}"
         sudo ctr -n k8s.io image tag "${img}" "${regional_fips_img}" || :
         sudo ctr -n k8s.io image tag "${img}" "${regional_fips_img/-eksbuild.1/}" || :
@@ -491,11 +491,9 @@ fi
 ### SSM Agent ##################################################################
 ################################################################################
 
-if [[ -v "INSTALL_SSM_AGENT" ]]; then
-  sudo yum install -y "https://amazon-ssm-$BINARY_BUCKET_REGION.s3.$BINARY_BUCKET_REGION.amazonaws.com/latest/linux_amd64/amazon-ssm-agent.rpm"
-  sudo systemctl enable amazon-ssm-agent
-  sudo systemctl start amazon-ssm-agent
-fi
+sudo yum install -y "https://amazon-ssm-$BINARY_BUCKET_REGION.s3.$BINARY_BUCKET_REGION.amazonaws.com/latest/linux_amd64/amazon-ssm-agent.rpm"
+sudo systemctl enable amazon-ssm-agent
+sudo systemctl start amazon-ssm-agent
 
 ################################################################################
 ### AMI Metadata ###############################################################
