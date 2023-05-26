@@ -155,6 +155,7 @@ fi
 ################################################################################
 
 sudo mv "${TEMPLATE_DIR}/runtime.slice" /etc/systemd/system/runtime.slice
+sudo restorecon /etc/systemd/system/runtime.slice
 
 ###############################################################################
 ### Containerd setup ##########################################################
@@ -335,6 +336,7 @@ fi
 
 sudo mv $TEMPLATE_DIR/kubelet.service /etc/systemd/system/kubelet.service
 sudo chown root:root /etc/systemd/system/kubelet.service
+sudo restorecon /etc/systemd/system/kubelet.service
 sudo mv $TEMPLATE_DIR/kubelet-config.json /etc/kubernetes/kubelet/kubelet-config.json
 sudo chown root:root /etc/kubernetes/kubelet/kubelet-config.json
 

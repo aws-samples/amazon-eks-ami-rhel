@@ -44,10 +44,10 @@ endif
 arch ?= x86_64
 ifeq ($(arch), arm64)
 	instance_type ?= m6g.large
-	ami_name ?= amazon-eks-arm64-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d')
+	ami_name ?= amazon-eks-arm64-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d-%H%M')
 else
 	instance_type ?= t3.large
-	ami_name ?= amazon-eks-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d%s')
+	ami_name ?= amazon-eks-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d-%H%M')
 endif
 
 ifeq ($(aws_region), cn-northwest-1)
