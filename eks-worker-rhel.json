@@ -21,6 +21,7 @@
     "creator": null,
     "docker_version": null,
     "encrypted": null,
+    "iam_role": null,
     "instance_type": null,
     "kernel_version": null,
     "kms_key_id": null,
@@ -48,6 +49,7 @@
       "region": "{{user `aws_region`}}",
       "source_ami": "{{user `source_ami_id`}}",
       "ami_users": "{{user `ami_users`}}",
+      "iam_instance_profile": "{{user `iam_role`}}",
       "snapshot_users": "{{user `ami_users`}}",
       "source_ami_filter": {
         "filters": {

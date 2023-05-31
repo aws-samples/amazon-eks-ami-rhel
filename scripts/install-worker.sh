@@ -272,7 +272,7 @@ BINARIES=(
   aws-iam-authenticator
 )
 for binary in ${BINARIES[*]}; do
-  if [[ -v "USE_AWS_CLI" && $(command -v aws) >/dev/null ]]; then
+  if [ -n "$AWS_ACCESS_KEY_ID" ] || [ $BINARY_BUCKET_NAME != "amazon-eks" ]; then
     echo "AWS cli present - using it to copy binaries from s3."
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary .
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary.sha256 .
@@ -306,7 +306,7 @@ if [ "$PULL_CNI_FROM_GITHUB" = "true" ]; then
   sudo sha512sum -c "${CNI_PLUGIN_FILENAME}.tgz.sha512"
   sudo rm "${CNI_PLUGIN_FILENAME}.tgz.sha512"
 else
-  if [[ -v "USE_AWS_CLI"  && $(command -v aws) >/dev/null ]]; then
+  if [ -n "$AWS_ACCESS_KEY_ID" ] || [ $BINARY_BUCKET_NAME != "amazon-eks" ]; then
     echo "AWS cli present - using it to copy binaries from s3."
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz .
     aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz.sha256 .
@@ -367,7 +367,7 @@ fi
 ### ECR CREDENTIAL PROVIDER ####################################################
 ################################################################################
 ECR_CREDENTIAL_PROVIDER_BINARY="ecr-credential-provider"
-if [[ -v "USE_AWS_CLI"  && $(command -v aws) >/dev/null ]]; then
+if [ -n "$AWS_ACCESS_KEY_ID" ] || [ $BINARY_BUCKET_NAME != "amazon-eks" ]; then
   echo "AWS cli present - using it to copy ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3."
   aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
 else

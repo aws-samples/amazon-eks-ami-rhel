@@ -44,10 +44,10 @@ endif
 arch ?= x86_64
 ifeq ($(arch), arm64)
 	instance_type ?= m6g.large
-	ami_name ?= amazon-eks-arm64-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d-%H%M')
+	ami_name ?= amazon-eks-arm64-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d')
 else
 	instance_type ?= t3.large
-	ami_name ?= amazon-eks-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d-%H%M')
+	ami_name ?= amazon-eks-node-$(K8S_VERSION_MINOR)-v$(shell date +'%Y%m%d%s')
 endif
 
 ifeq ($(aws_region), cn-northwest-1)
@@ -121,23 +121,23 @@ k8s: validate ## Build default K8s version of EKS Optimized RHEL AMI
 
 .PHONY: 1.22
 1.22: ## Build EKS Optimized RHEL AMI - K8s 1.22
-	$(MAKE) k8s kubernetes_version=1.22.17 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
+	$(MAKE) k8s kubernetes_version=1.22.17 kubernetes_build_date=2023-03-17
 
 .PHONY: 1.23
 1.23: ## Build EKS Optimized RHEL AMI - K8s 1.23
-	$(MAKE) k8s kubernetes_version=1.23.17 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
+	$(MAKE) k8s kubernetes_version=1.23.17 kubernetes_build_date=2023-03-17
 
 .PHONY: 1.24
 1.24: ## Build EKS Optimized RHEL AMI - K8s 1.24
-	$(MAKE) k8s kubernetes_version=1.24.11 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
+	$(MAKE) k8s kubernetes_version=1.24.11 kubernetes_build_date=2023-03-17
 
 .PHONY: 1.25
 1.25: ## Build EKS Optimized RHEL AMI - K8s 1.25
-	$(MAKE) k8s kubernetes_version=1.25.7 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
+	$(MAKE) k8s kubernetes_version=1.25.7 kubernetes_build_date=2023-03-17
 
 .PHONY: 1.26
 1.26: ## Build EKS Optimized RHEL AMI - K8s 1.26
-	$(MAKE) k8s kubernetes_version=1.26.2 kubernetes_build_date=2023-03-17 pull_cni_from_github=true
+	$(MAKE) k8s kubernetes_version=1.26.2 kubernetes_build_date=2023-03-17
 
 .PHONY: clean
 clean:
