@@ -1,0 +1,28 @@
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: rhel
+  region: us-gov-east-1
+
+managedNodeGroups:
+  - name: rhelgit
+    minSize: 2
+    desiredCapacity: 2
+    maxSize: 2
+    ami: ami-07c6c34e42da4e823
+    amiFamily: AmazonLinux2
+    instanceType: t3.medium
+    labels:
+      role: worker
+    tags:
+      nodegroup-name: rhelgit
+    privateNetworking: true
+
+    overrideBootstrapCommand: |
+      #!/bin/bash
+      /etc/eks/bootstrap.sh rhel --container-runtime containerd
+      systemctl disable nm-cloud-setup.timer
+      systemctl disable nm-cloud-setup.service
+      reboot

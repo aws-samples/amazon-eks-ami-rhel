@@ -4,9 +4,6 @@
 sudo yum clean all
 sudo rm -rf /var/cache/yum
 
-# Clean up build artifacts
-sudo rm -rf /tmp/worker
-
 # Clean up files to reduce confusion during debug
 sudo rm -rf \
   /etc/hostname \
@@ -27,6 +24,7 @@ sudo rm -rf \
   /var/log/secure \
   /var/log/wtmp \
   /var/log/messages \
+  /var/log/audit/* \
   /tmp/imds-tokens
 
 sudo touch /etc/machine-id

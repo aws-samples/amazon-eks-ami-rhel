@@ -33,7 +33,7 @@ function print_help {
   echo "--ip-family Specify ip family of the cluster"
   echo "--kubelet-extra-args Extra arguments to add to the kubelet. Useful for adding labels or taints."
   echo "--local-disks Setup instance storage NVMe disks in raid0 or mount the individual disks for use by pods [mount | raid0]"
-  echo "--mount-bfs-fs Mount a bpffs at /sys/fs/bpf (default: true, for Kubernetes 1.27+; false otherwise)"
+  echo "--mount-bpf-fs Mount a bpffs at /sys/fs/bpf (default: true)"
   echo "--pause-container-account The AWS account (number) to pull the pause container from"
   echo "--pause-container-version The tag of the pause container"
   echo "--service-ipv6-cidr ipv6 cidr range of the cluster"
@@ -105,7 +105,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --pause-container-account)
       PAUSE_CONTAINER_ACCOUNT=$2
-      log "INFO: --pause-container-accounte='${PAUSE_CONTAINER_ACCOUNT}'"
+      log "INFO: --pause-container-account='${PAUSE_CONTAINER_ACCOUNT}'"
       shift
       shift
       ;;
@@ -159,6 +159,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --local-disks)
       LOCAL_DISKS=$2
+      log "INFO: --local-disks='${LOCAL_DISKS}'"
       shift
       shift
       ;;
@@ -223,11 +224,7 @@ if [[ ! -z ${LOCAL_DISKS} ]]; then
   setup-local-disks "${LOCAL_DISKS}"
 fi
 
-DEFAULT_MOUNT_BPF_FS="true"
-if vercmp "$KUBELET_VERSION" lt "1.27.0"; then
-  DEFAULT_MOUNT_BPF_FS="false"
-fi
-MOUNT_BPF_FS="${MOUNT_BPF_FS:-$DEFAULT_MOUNT_BPF_FS}"
+MOUNT_BPF_FS="${MOUNT_BPF_FS:-true}"
 
 # Helper function which calculates the amount of the given resource (either CPU or memory)
 # to reserve in a given resource range, specified by a start and end of the range and a percentage
@@ -321,8 +318,13 @@ if [[ "$MACHINE" != "x86_64" && "$MACHINE" != "aarch64" ]]; then
 fi
 
 if [ "$MOUNT_BPF_FS" = "true" ]; then
-  sudo mount-bpf-fs
+  mount-bpf-fs
 fi
+
+cp -v /etc/eks/configure-clocksource.service /etc/systemd/system/configure-clocksource.service
+chown root:root /etc/systemd/system/configure-clocksource.service
+systemctl daemon-reload
+systemctl enable --now configure-clocksource
 
 ECR_URI=$(/etc/eks/get-ecr-uri.sh "${AWS_DEFAULT_REGION}" "${AWS_SERVICES_DOMAIN}" "${PAUSE_CONTAINER_ACCOUNT:-}")
 PAUSE_CONTAINER_IMAGE=${PAUSE_CONTAINER_IMAGE:-$ECR_URI/eks/pause}
@@ -441,7 +443,7 @@ fi
 
 ### kubelet.service configuration
 
-MAC=$(imds 'latest/meta-data/network/interfaces/macs/' | head -n 1 | sed 's/\/$//')
+MAC=$(imds 'latest/meta-data/mac')
 
 if [[ -z "${DNS_CLUSTER_IP}" ]]; then
   if [[ "${IP_FAMILY}" == "ipv6" ]]; then
