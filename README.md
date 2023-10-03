@@ -82,14 +82,17 @@ git clone https://github.com/aws-samples/amazon-eks-ami-rhel.git && cd amazon-ek
 
 A Makefile is provided to build the Amazon EKS Worker AMI, but it is just a small wrapper around invoking Packer directly. You can initiate the build process by running the following command in the root of this repository:
 ```bash
-# Example for building an AMI off of the latest RHEL 8.7 AMI for Kubernetes version 1.25
-make 1.25
+# Example for building an AMI off of the latest RHEL 8.7 AMI for Kubernetes version 1.28
+make 1.28
+
+# Example for building an AMI off of the latest RHEL 8.7 AMI for Kubernetes version 1.28 in us-gov-east-1 region
+make 1.28 ami_regions=us-gov-east-1 aws_region=us-gov-east-1
 
 # Example for building an AMI off of the latest RHEL 9.0.0 AMI in us-east-2 region
-make 1.25 source_ami_filter_name=RHEL-9.0.0_HVM-2023*-x86_64-* ami_regions=us-east-2 aws_region=us-east-2
+make 1.28 source_ami_filter_name=RHEL-9.0.0_HVM-2023*-x86_64-* ami_regions=us-east-2 aws_region=us-east-2
 
 # Example for building a customized DISA STIG compliant AMI, owned by a specific AWS Account in AWS GovCloud us-gov-east-1 region, with binaries stored in a private S3 bucket, an IAM instance profile attached, and using AWS Systems Manager Session Manager for Packer terminal access.
-make 1.25 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_regions=us-gov-east-1 aws_region=us-gov-east-1 binary_bucket_name=my-eks-bucket binary_bucket_region=us-gov-east-1 iam_role=EC2Role pull_cni_from_github=false ssh_interface=session_manager
+make 1.28 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_regions=us-gov-east-1 aws_region=us-gov-east-1 binary_bucket_name=my-eks-bucket binary_bucket_region=us-gov-east-1 iam_role=EC2Role pull_cni_from_github=false ssh_interface=session_manager
 ```
 
 The Makefile chooses a particular kubelet binary to use per Kubernetes version which you can [view here](Makefile).
