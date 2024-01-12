@@ -2,7 +2,7 @@
   "_comment": "All template variables are enumerated here; and most variables have a default value defined in eks-worker-al2-variables.json",
   "variables": {
     "additional_yum_repos": null,
-    "ami_component_description": null,    
+    "ami_component_description": null,
     "ami_description": null,
     "ami_name": null,
     "ami_regions": null,
@@ -15,12 +15,13 @@
     "aws_session_token": null,
     "binary_bucket_name": null,
     "binary_bucket_region": null,
-    "cache_container_images": null,    
+    "cache_container_images": null,
     "cni_plugin_version": null,
     "containerd_version": null,
     "creator": null,
     "docker_version": null,
     "encrypted": null,
+    "enable_fips": null,
     "iam_role": null,
     "instance_type": null,
     "kernel_version": null,
@@ -28,7 +29,7 @@
     "kubernetes_build_date": null,
     "kubernetes_version": null,
     "launch_block_device_mappings_volume_size": null,
-    "pause_container_version": null,    
+    "pause_container_version": null,
     "pull_cni_from_github": null,
     "remote_folder": null,
     "runc_version": null,
@@ -112,12 +113,16 @@
         "ssm_agent_version": "{{ user `ssm_agent_version`}}"
       },
       "ami_name": "{{user `ami_name`}}",
-      "ami_description": "{{ user `ami_description` }}, {{ user `ami_component_description` }}"
+      "ami_description": "{{ user `ami_description` }}, {{ user `ami_component_description` }}",
+      "metadata_options": {
+        "http_tokens": "required"
+      }
     }
   ],
   "provisioners": [
     {
       "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
       "inline": [
         "mkdir -p {{user `working_dir`}}",
         "mkdir -p {{user `working_dir`}}/log-collector-script"
@@ -135,10 +140,26 @@
     },
     {
       "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
       "inline": [
         "sudo chmod -R a+x {{user `working_dir`}}/bin/",
         "sudo mv {{user `working_dir`}}/bin/* /usr/bin/"
       ]
+    },
+    {
+      "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
+      "script": "{{template_dir}}/scripts/enable-fips.sh",
+      "environment_vars": [
+        "ENABLE_FIPS={{user `enable_fips`}}"
+      ]
+    },
+    {
+      "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
+      "inline": ["sudo reboot"],
+      "expect_disconnect": true,
+      "pause_after": "90s"
     },
     {
       "type": "shell",
@@ -179,14 +200,6 @@
     {
       "type": "shell",
       "remote_folder": "{{ user `remote_folder`}}",
-      "script": "{{template_dir}}/scripts/validate.sh",
-      "environment_vars": [
-        "KERNEL_VERSION={{user `kernel_version`}}"
-      ]
-    },
-    {
-      "type": "shell",
-      "remote_folder": "{{ user `remote_folder`}}",
       "script": "{{template_dir}}/scripts/generate-version-info.sh",
       "execute_command": "chmod +x {{ .Path }}; {{ .Path }} {{user `working_dir`}}/version-info.json",
       "environment_vars": [
@@ -201,6 +214,7 @@
     },
     {
       "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
       "inline": [
         "rm -rf {{user `working_dir`}}"
       ]

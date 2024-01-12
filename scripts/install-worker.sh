@@ -38,7 +38,6 @@ validate_env_set PULL_CNI_FROM_GITHUB
 validate_env_set PAUSE_CONTAINER_VERSION
 validate_env_set CACHE_CONTAINER_IMAGES
 validate_env_set WORKING_DIR
-validate_env_set SSM_AGENT_VERSION
 
 ################################################################################
 ### Machine Architecture #######################################################
@@ -58,6 +57,13 @@ fi
 ### Packages ###################################################################
 ################################################################################
 
+sudo yum install -y \
+  yum-utils \
+  yum-plugin-versionlock
+
+# lock the version of the kernel and associated packages before we yum update
+sudo yum versionlock kernel-$(uname -r) kernel-headers-$(uname -r) kernel-devel-$(uname -r)
+
 # Update the OS to begin with to catch up to the latest packages.
 sudo yum update -y
 
@@ -74,8 +80,8 @@ sudo yum install -y \
   socat \
   unzip \
   wget \
-  yum-utils \
-  yum-plugin-versionlock
+  mdadm \
+  pigz
 
 # Install Cloudformation helper
 sudo mkdir -p /opt/aws/bin
@@ -89,7 +95,7 @@ sudo python3 setup.py install --install-scripts /opt/aws/bin
 
 # Remove any old kernel versions. `--count=1` here means "only leave 1 kernel version installed"
 sudo dnf remove --oldinstallonly --setopt installonly_limit=2 -y || true
-sudo yum versionlock kernel-$(uname -r)
+#sudo yum versionlock kernel-$(uname -r)
 
 # Remove the ec2-net-utils package, if it's installed. This package interferes with the route setup on the instance.
 if yum list installed | grep ec2-net-utils; then sudo yum remove ec2-net-utils -y -q; fi
@@ -120,22 +126,19 @@ sudo mv $WORKING_DIR/iptables-restore.service /etc/eks/iptables-restore.service
 ### awscli #####################################################
 ################################################################################
 
-### isolated regions can't communicate to awscli.amazonaws.com so installing awscli through yum
-ISOLATED_REGIONS=(us-iso-east-1 us-iso-west-1 us-isob-east-1)
-if ! [[ " ${ISOLATED_REGIONS[*]} " =~ " ${BINARY_BUCKET_REGION} " ]]; then
-  # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-  echo "Installing awscli v2 bundle"
-  AWSCLI_DIR="${WORKING_DIR}/awscli-install"
-  mkdir "${AWSCLI_DIR}"
-  curl \
-    --silent \
-    --show-error \
-    --retry 10 \
-    --retry-delay 1 \
-    -L "https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip" -o "${AWSCLI_DIR}/awscliv2.zip"
-  unzip -q "${AWSCLI_DIR}/awscliv2.zip" -d ${AWSCLI_DIR}
-  sudo "${AWSCLI_DIR}/aws/install" --bin-dir /bin/ --update
-fi
+### no option to install the awscli through yum so have to install from awscli.amazonaws.com
+# https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+echo "Installing awscli v2 bundle"
+AWSCLI_DIR="${WORKING_DIR}/awscli-install"
+mkdir "${AWSCLI_DIR}"
+curl \
+  --silent \
+  --show-error \
+  --retry 10 \
+  --retry-delay 1 \
+  -L "https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip" -o "${AWSCLI_DIR}/awscliv2.zip"
+unzip -q "${AWSCLI_DIR}/awscliv2.zip" -d ${AWSCLI_DIR}
+sudo "${AWSCLI_DIR}/aws/install" --bin-dir /bin/ --update
 
 ################################################################################
 ### systemd ####################################################################
@@ -171,8 +174,15 @@ sudo mv $WORKING_DIR/pull-sandbox-image.sh /etc/eks/containerd/pull-sandbox-imag
 sudo mv $WORKING_DIR/pull-image.sh /etc/eks/containerd/pull-image.sh
 sudo chmod +x /etc/eks/containerd/pull-sandbox-image.sh
 sudo chmod +x /etc/eks/containerd/pull-image.sh
-
 sudo mkdir -p /etc/systemd/system/containerd.service.d
+CONFIGURE_CONTAINERD_SLICE=$(vercmp "$KUBERNETES_VERSION" gteq "1.24.0" || true)
+if [ "$CONFIGURE_CONTAINERD_SLICE" == "true" ]; then
+  cat << EOF | sudo tee /etc/systemd/system/containerd.service.d/00-runtime-slice.conf
+[Service]
+Slice=runtime.slice
+EOF
+fi
+
 cat << EOF | sudo tee /etc/systemd/system/containerd.service.d/10-compat-symlink.conf
 [Service]
 ExecStartPre=/bin/ln -sf /run/containerd/containerd.sock /run/dockershim.sock
@@ -288,8 +298,8 @@ CNI_PLUGIN_FILENAME="cni-plugins-linux-${ARCH}-${CNI_PLUGIN_VERSION}"
 
 if [ "$PULL_CNI_FROM_GITHUB" = "true" ]; then
   echo "Downloading CNI plugins from Github"
-  sudo wget "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGIN_VERSION}/${CNI_PLUGIN_FILENAME}.tgz" -q
-  sudo wget "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGIN_VERSION}/${CNI_PLUGIN_FILENAME}.tgz.sha512" -q
+  sudo wget "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGIN_VERSION}/${CNI_PLUGIN_FILENAME}.tgz"
+  sudo wget "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGIN_VERSION}/${CNI_PLUGIN_FILENAME}.tgz.sha512"
   sudo sha512sum -c "${CNI_PLUGIN_FILENAME}.tgz.sha512"
   sudo rm "${CNI_PLUGIN_FILENAME}.tgz.sha512"
 else
@@ -371,7 +381,7 @@ sudo mv $WORKING_DIR/ecr-credential-provider-config.json /etc/eks/image-credenti
 ### Cache Images ###############################################################
 ################################################################################
 
-if [[ "$CACHE_CONTAINER_IMAGES" == "true" ]] && ! [[ " ${ISOLATED_REGIONS[*]} " =~ " ${BINARY_BUCKET_REGION} " ]]; then
+if [[ "$CACHE_CONTAINER_IMAGES" == "true" ]] && ! [[ ${ISOLATED_REGIONS} =~ $BINARY_BUCKET_REGION ]]; then
   AWS_DOMAIN=$(imds 'latest/meta-data/services/domain')
   ECR_URI=$(/etc/eks/get-ecr-uri.sh "${BINARY_BUCKET_REGION}" "${AWS_DOMAIN}")
 
@@ -435,6 +445,7 @@ if [[ "$CACHE_CONTAINER_IMAGES" == "true" ]] && ! [[ " ${ISOLATED_REGIONS[*]} " 
     ${VPC_CNI_IMGS[@]+"${VPC_CNI_IMGS[@]}"}
   )
   PULLED_IMGS=()
+  REGIONS=$(aws ec2 describe-regions --all-regions --output text --query 'Regions[].[RegionName]')
 
   for img in "${CACHE_IMGS[@]}"; do
     ## only kube-proxy-minimal is vended for K8s 1.24+
@@ -459,9 +470,10 @@ if [[ "$CACHE_CONTAINER_IMAGES" == "true" ]] && ! [[ " ${ISOLATED_REGIONS[*]} " 
   done
 
   #### Tag the pulled down image for all other regions in the partition
-  for region in $(aws ec2 describe-regions --all-regions | jq -r '.Regions[] .RegionName'); do
+  for region in ${REGIONS[*]}; do
     for img in "${PULLED_IMGS[@]}"; do
-      regional_img="${img/$BINARY_BUCKET_REGION/$region}"
+      region_uri=$(/etc/eks/get-ecr-uri.sh "${region}" "${AWS_DOMAIN}")
+      regional_img="${img/$ECR_URI/$region_uri}"
       sudo ctr -n k8s.io image tag "${img}" "${regional_img}" || :
       ## Tag ECR fips endpoint for supported regions
       if [[ "${region}" =~ (us-east-1|us-east-2|us-west-1|us-west-2|us-gov-east-1|us-gov-west-1) ]]; then
@@ -481,10 +493,15 @@ fi
 ### SSM Agent ##################################################################
 ################################################################################
 
-echo "Installing amazon-ssm-agent"
-sudo yum install -y https://s3.${BINARY_BUCKET_REGION}.${S3_DOMAIN}/amazon-ssm-${BINARY_BUCKET_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
-sudo systemctl enable amazon-ssm-agent
-sudo systemctl start amazon-ssm-agent
+if yum list installed | grep amazon-ssm-agent; then
+  echo "amazon-ssm-agent already present - skipping install"
+else
+  if [[ -z "${SSM_AGENT_VERSION}" ]]; then
+	SSM_AGENT_VERSION="latest"
+  fi
+  echo "Installing amazon-ssm-agent@${SSM_AGENT_VERSION} from S3"
+  sudo yum install -y https://s3.${BINARY_BUCKET_REGION}.${S3_DOMAIN}/amazon-ssm-${BINARY_BUCKET_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
+fi
 
 ################################################################################
 ### AMI Metadata ###############################################################
@@ -517,6 +534,7 @@ EOF
 echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
 echo fs.inotify.max_user_instances=8192 | sudo tee -a /etc/sysctl.conf
 echo vm.max_map_count=524288 | sudo tee -a /etc/sysctl.conf
+echo 'kernel.pid_max=4194304' | sudo tee -a /etc/sysctl.conf
 
 ################################################################################
 ### adding log-collector-script ################################################

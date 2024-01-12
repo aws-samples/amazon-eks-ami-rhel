@@ -69,6 +69,7 @@ If you are new to Amazon EKS, we recommend that you follow our [Getting Started]
 sudo yum install -y yum-utils
 sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
 sudo yum -y install packer
+packer plugins install github.com/hashicorp/amazon
 
 ```
 
@@ -82,10 +83,10 @@ git clone https://github.com/aws-samples/amazon-eks-ami-rhel.git && cd amazon-ek
 
 A Makefile is provided to build the Amazon EKS Worker AMI, but it is just a small wrapper around invoking Packer directly. You can initiate the build process by running the following command in the root of this repository:
 ```bash
-# Example for building an AMI off of the latest RHEL 8.7 AMI for Kubernetes version 1.28
+# Example for building an AMI off of the latest RHEL 8.9 AMI for Kubernetes version 1.28
 make 1.28
 
-# Example for building an AMI off of the latest RHEL 8.7 AMI for Kubernetes version 1.28 in us-gov-east-1 region
+# Example for building an AMI off of the latest RHEL 8.9 AMI for Kubernetes version 1.28 in us-gov-east-1 region
 make 1.28 ami_regions=us-gov-east-1 aws_region=us-gov-east-1
 
 # Example for building an AMI off of the latest RHEL 9.0.0 AMI in us-east-2 region
