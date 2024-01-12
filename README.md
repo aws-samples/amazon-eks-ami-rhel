@@ -14,7 +14,7 @@ If you are new to Amazon EKS, we recommend that you follow our [Getting Started]
 * Internet connectivity from EC2 for file downloads OR files stored locally in S3 bucket.
 * You must have [Packer](https://www.packer.io/) version 1.8.0 or later installed on your local system, an EC2 Instance in AWS, or in [AWS CloudShell](https://aws.amazon.com/cloudshell/). For more information, see [Installing Packer](https://www.packer.io/docs/install/index.html) in the Packer documentation.
 * You must also have AWS account credentials configured so that Packer can make calls to AWS API operations on your behalf. For more information, see [Authentication](https://www.packer.io/docs/builders/amazon.html#specifying-amazon-credentials) in the Packer documentation.
-* We recommend using AWS CloudShell
+* We recommend using AWS CloudShell for simplicity.
 
 ## 🪪 Minimal Packer IAM Permissions
 ```bash
