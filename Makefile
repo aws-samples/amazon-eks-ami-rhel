@@ -2,7 +2,7 @@ MAKEFILE_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 PACKER_DEFAULT_VARIABLE_FILE ?= $(MAKEFILE_DIR)/eks-worker-rhel-variables.json
 PACKER_TEMPLATE_FILE ?= $(MAKEFILE_DIR)/eks-worker-rhel.json
-PACKER_BINARY ?= /usr/bin/packer
+PACKER_BINARY ?= packer
 AVAILABLE_PACKER_VARIABLES := $(shell $(PACKER_BINARY) inspect -machine-readable $(PACKER_TEMPLATE_FILE) | grep 'template-variable' | awk -F ',' '{print $$4}')
 
 K8S_VERSION_PARTS := $(subst ., ,$(kubernetes_version))

@@ -85,13 +85,11 @@ sudo yum install -y \
 
 # Install Cloudformation helper
 sudo mkdir -p /opt/aws/bin
-#cd /opt/aws/bin
 sudo wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz -q
-#sudo python3 -m easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-py3-latest.tar.gz
-tar xvf aws-cfn-bootstrap-py3-latest.tar.gz
+tar xf aws-cfn-bootstrap-py3-latest.tar.gz
 cd aws-cfn-bootstrap-2.0
-sudo python3 setup.py build
-sudo python3 setup.py install --install-scripts /opt/aws/bin
+sudo python3 setup.py build -q
+sudo python3 setup.py -q install --install-scripts /opt/aws/bin
 
 # Remove any old kernel versions. `--count=1` here means "only leave 1 kernel version installed"
 sudo dnf remove --oldinstallonly --setopt installonly_limit=2 -y || true
@@ -128,17 +126,21 @@ sudo mv $WORKING_DIR/iptables-restore.service /etc/eks/iptables-restore.service
 
 ### no option to install the awscli through yum so have to install from awscli.amazonaws.com
 # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-echo "Installing awscli v2 bundle"
-AWSCLI_DIR="${WORKING_DIR}/awscli-install"
-mkdir "${AWSCLI_DIR}"
-curl \
-  --silent \
-  --show-error \
-  --retry 10 \
-  --retry-delay 1 \
-  -L "https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip" -o "${AWSCLI_DIR}/awscliv2.zip"
-unzip -q "${AWSCLI_DIR}/awscliv2.zip" -d ${AWSCLI_DIR}
-sudo "${AWSCLI_DIR}/aws/install" --bin-dir /bin/ --update
+if command -v aws &> /dev/null; then
+  echo "awscli is already installed. Skipping installation."
+else
+  echo "Installing awscli v2 bundle"
+  AWSCLI_DIR="${WORKING_DIR}/awscli-install"
+  mkdir "${AWSCLI_DIR}"
+  curl \
+    --silent \
+    --show-error \
+    --retry 10 \
+    --retry-delay 1 \
+    -L "https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip" -o "${AWSCLI_DIR}/awscliv2.zip"
+  unzip -q "${AWSCLI_DIR}/awscliv2.zip" -d ${AWSCLI_DIR}
+  sudo "${AWSCLI_DIR}/aws/install" --bin-dir /bin/ --update
+fi
 
 ################################################################################
 ### systemd ####################################################################
@@ -156,9 +158,8 @@ sudo restorecon /etc/systemd/system/runtime.slice
 #sudo yum versionlock runc-*
 
 # install containerd and lock version
-sudo wget https://download.docker.com/linux/centos/docker-ce.repo -P /etc/yum.repos.d/ -q
-sudo yum install -y containerd.io
-sudo yum versionlock containerd*
+sudo yum install -y containerd.io-${CONTAINERD_VERSION}
+sudo yum versionlock containerd.io-*
 
 sudo mkdir -p /etc/eks/containerd
 if [ -f "/etc/eks/containerd/containerd-config.toml" ]; then
@@ -496,11 +497,15 @@ fi
 if yum list installed | grep amazon-ssm-agent; then
   echo "amazon-ssm-agent already present - skipping install"
 else
-  if [[ -z "${SSM_AGENT_VERSION}" ]]; then
-	SSM_AGENT_VERSION="latest"
+  if ! [[ -z "${SSM_AGENT_VERSION}" ]]; then
+    echo "Installing amazon-ssm-agent@${SSM_AGENT_VERSION} from S3"
+    sudo yum install -y https://s3.${BINARY_BUCKET_REGION}.${S3_DOMAIN}/amazon-ssm-${BINARY_BUCKET_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
+  else
+    SSM_AGENT_VERSION="latest"
+    echo "Installing amazon-ssm-agent@${SSM_AGENT_VERSION} from S3"
+    sudo yum install -y https://s3.${BINARY_BUCKET_REGION}.${S3_DOMAIN}/amazon-ssm-${BINARY_BUCKET_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
+
   fi
-  echo "Installing amazon-ssm-agent@${SSM_AGENT_VERSION} from S3"
-  sudo yum install -y https://s3.${BINARY_BUCKET_REGION}.${S3_DOMAIN}/amazon-ssm-${BINARY_BUCKET_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
 fi
 
 ################################################################################

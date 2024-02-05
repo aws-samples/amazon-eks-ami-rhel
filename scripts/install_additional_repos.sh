@@ -31,6 +31,7 @@ BEGIN {RS=";";FS=","}
 {print "["vars["repo"]"]" > Repo}
 {print "name="vars["name"] > Repo}
 {print "baseurl="vars["baseurl"] > Repo}
+{if (length(vars["gpgkey"]) != 0) print "gpgkey="vars["gpgkey"] > Repo}
 {if (length(vars["priority"]) != 0) print "priority="vars["priority"] > Repo}
 '
 sudo awk "$AWK_CMD" <<< "${ADDITIONAL_YUM_REPOS}"

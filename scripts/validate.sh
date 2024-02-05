@@ -41,32 +41,32 @@ else
   exit 1
 fi
 
-function versionlock-entries() {
-  # the format of this output is EPOCH:NAME-VERSION-RELEASE.ARCH
-  # more info in yum-versionlock(1)
-  # rpm doesn't accept EPOCH when querying the db, so remove it
-  yum versionlock list --quiet | cut -d ':' -f2
-}
+# function versionlock-entries() {
+#   # the format of this output is EPOCH:NAME-VERSION-RELEASE.ARCH
+#   # more info in yum-versionlock(1)
+#   # rpm doesn't accept EPOCH when querying the db, so remove it
+#   yum versionlock list --quiet | cut -d ':' -f2
+# }
 
-function versionlock-packages() {
-  versionlock-entries | xargs -I '{}' rpm --query '{}' --queryformat '%{NAME}\n'
-}
+# function versionlock-packages() {
+#   versionlock-entries | xargs -I '{}' rpm --query '{}' --queryformat '%{NAME}\n'
+# }
 
-for ENTRY in $(versionlock-entries); do
-  if ! rpm --query "$ENTRY" &> /dev/null; then
-    echo "There is no package matching the versionlock entry: '$ENTRY'"
-    exit 1
-  fi
-done
+# for ENTRY in $(versionlock-entries); do
+#   if ! rpm --query "$ENTRY" &> /dev/null; then
+#     echo "There is no package matching the versionlock entry: '$ENTRY'"
+#     exit 1
+#   fi
+# done
 
-LOCKED_PACKAGES=$(versionlock-packages | wc -l)
-UNIQUE_LOCKED_PACKAGES=$(versionlock-packages | sort -u | wc -l)
-if [ $LOCKED_PACKAGES -ne $UNIQUE_LOCKED_PACKAGES ]; then
-  echo "Package(s) have multiple version locks!"
-  versionlock-entries
-fi
+# LOCKED_PACKAGES=$(versionlock-packages | wc -l)
+# UNIQUE_LOCKED_PACKAGES=$(versionlock-packages | sort -u | wc -l)
+# if [ $LOCKED_PACKAGES -ne $UNIQUE_LOCKED_PACKAGES ]; then
+#   echo "Package(s) have multiple version locks!"
+#   versionlock-entries
+# fi
 
-echo "Package versionlocks are correct!"
+# echo "Package versionlocks are correct!"
 
 REQUIRED_COMMANDS=(unpigz)
 

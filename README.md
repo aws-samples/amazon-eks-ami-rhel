@@ -83,8 +83,8 @@ git clone https://github.com/aws-samples/amazon-eks-ami-rhel.git && cd amazon-ek
 
 A Makefile is provided to build the Amazon EKS Worker AMI, but it is just a small wrapper around invoking Packer directly. You can initiate the build process by running the following command in the root of this repository:
 ```bash
-# Example for building an AMI off of the latest RHEL 8.9 AMI for Kubernetes version 1.28
-make 1.28
+# Example for building an AMI off of the latest RHEL 8.9 AMI for Kubernetes version 1.29
+make 1.29
 
 # Example for building an AMI off of the latest RHEL 8.9 AMI for Kubernetes version 1.28 in us-gov-east-1 region
 make 1.28 ami_regions=us-gov-east-1 aws_region=us-gov-east-1
