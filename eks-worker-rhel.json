@@ -43,6 +43,7 @@
     "subnet_id": null,
     "temporary_security_group_source_cidrs": null,
     "volume_type": null,
+    "vpc_id": null,
     "working_dir": null
   },
   "builders": [
@@ -100,6 +101,7 @@
         "creator": "{{user `creator`}}"
       },
       "subnet_id": "{{user `subnet_id`}}",
+      "vpc_id": "{{user `vpc_id`}}",
       "tags": {
         "Name": "{{user `ami_name`}}",
         "created": "{{timestamp}}",

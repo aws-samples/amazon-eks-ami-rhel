@@ -36,5 +36,6 @@
     "subnet_id": "",
     "temporary_security_group_source_cidrs": "",
     "volume_type": "gp2",
+    "vpc_id": "",
     "working_dir": "{{user `remote_folder`}}/worker"
 }
