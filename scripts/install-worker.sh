@@ -143,6 +143,16 @@ else
 fi
 
 ################################################################################
+### AWS credentials ############################################################
+################################################################################
+
+AWS_CREDS_OK=false
+if aws sts get-caller-identity > /dev/null 2>&1; then
+  AWS_CREDS_OK=true
+fi
+echo "AWS credentials available: ${AWS_CREDS_OK}"
+
+################################################################################
 ### systemd ####################################################################
 ################################################################################
 
@@ -270,12 +280,17 @@ BINARIES=(
   aws-iam-authenticator
 )
 for binary in ${BINARIES[*]}; do
-  if [[ -v AWS_ACCESS_KEY_ID && -n "$AWS_ACCESS_KEY_ID" ]] || [[ "$BINARY_BUCKET_NAME" != "amazon-eks" ]]; then
-    echo "AWS cli present - using it to copy binaries from s3."
-    aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary .
-    aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary.sha256 .
+  if [ "${AWS_CREDS_OK}" = "true" ]; then
+    echo "AWS credentials present - using them to copy binaries from s3."
+    if [[ "$BINARY_BUCKET_NAME" == "amazon-eks" ]] && [[ "$AWS_REGION" =~ (us-gov-east-1|us-gov-west-1) ]]; then
+      aws s3 cp --region us-west-2 --no-sign-request $S3_PATH/$binary .
+      aws s3 cp --region us-west-2 --no-sign-request $S3_PATH/$binary.sha256 .
+    else
+      aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary .
+      aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary.sha256 .
+    fi
   else
-    echo "AWS cli missing - using wget to fetch binaries from s3. Note: This won't work for private bucket."
+    echo "AWS credentials missing - using wget to fetch binaries from s3. Note: This won't work for private bucket."
     sudo wget $S3_URL_BASE/$binary
     sudo wget $S3_URL_BASE/$binary.sha256
   fi
@@ -304,14 +319,15 @@ if [ "$PULL_CNI_FROM_GITHUB" = "true" ]; then
   sudo sha512sum -c "${CNI_PLUGIN_FILENAME}.tgz.sha512"
   sudo rm "${CNI_PLUGIN_FILENAME}.tgz.sha512"
 else
-  if [[ -v AWS_ACCESS_KEY_ID && -n "$AWS_ACCESS_KEY_ID" ]] || [[ "$BINARY_BUCKET_NAME" != "amazon-eks" ]]; then
-    echo "AWS cli present - using it to copy binaries from s3."
-    aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz .
-    aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz.sha256 .
-  else
-    echo "AWS cli missing - using wget to fetch cni binaries from s3. Note: This won't work for private bucket."
-    sudo wget "$S3_URL_BASE/${CNI_PLUGIN_FILENAME}.tgz"
-    sudo wget "$S3_URL_BASE/${CNI_PLUGIN_FILENAME}.tgz.sha256"
+  if [ "${AWS_CREDS_OK}" = "true" ]; then
+    echo "AWS credentials present - using them to copy binaries from s3."
+    if [[ "$BINARY_BUCKET_NAME" == "amazon-eks" ]] && [[ "$AWS_REGION" =~ (us-gov-east-1|us-gov-west-1) ]]; then
+      aws s3 cp --region us-west-2 --no-sign-request $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz .
+      aws s3 cp --region us-west-2 --no-sign-request $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz.sha256 .
+    else
+      aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz .
+      aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/${CNI_PLUGIN_FILENAME}.tgz.sha256 .
+    fi
   fi
   sudo sha256sum -c "${CNI_PLUGIN_FILENAME}.tgz.sha256"
 fi
@@ -366,11 +382,15 @@ sudo chmod +x /etc/eks/max-pods-calculator.sh
 ### ECR CREDENTIAL PROVIDER ####################################################
 ################################################################################
 ECR_CREDENTIAL_PROVIDER_BINARY="ecr-credential-provider"
-if [[ -v AWS_ACCESS_KEY_ID && -n "$AWS_ACCESS_KEY_ID" ]] || [[ "$BINARY_BUCKET_NAME" != "amazon-eks" ]]; then
-  echo "AWS cli present - using it to copy ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3."
-  aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
+if [ "${AWS_CREDS_OK}" = "true" ]; then
+  echo "AWS credentials present - using them to copy ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3."
+  if [[ "$BINARY_BUCKET_NAME" == "amazon-eks" ]] && [[ "$AWS_REGION" =~ (us-gov-east-1|us-gov-west-1) ]]; then
+    aws s3 cp --region us-west-2 --no-sign-request $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
+  else
+    aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .      
+  fi
 else
-  echo "AWS cli missing - using wget to fetch ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3. Note: This won't work for private bucket."
+  echo "AWS credentials missing - using wget to fetch ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3. Note: This won't work for private bucket."
   sudo wget "$S3_URL_BASE/$ECR_CREDENTIAL_PROVIDER_BINARY"
 fi
 sudo chmod +x $ECR_CREDENTIAL_PROVIDER_BINARY
