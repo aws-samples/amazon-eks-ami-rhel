@@ -185,6 +185,7 @@
         "RUNC_VERSION={{user `runc_version`}}",
         "CNI_PLUGIN_VERSION={{user `cni_plugin_version`}}",
         "PULL_CNI_FROM_GITHUB={{user `pull_cni_from_github`}}",
+        "AWS_REGION={{user `aws_region`}}",
         "AWS_ACCESS_KEY_ID={{user `aws_access_key_id`}}",
         "AWS_SECRET_ACCESS_KEY={{user `aws_secret_access_key`}}",
         "AWS_SESSION_TOKEN={{user `aws_session_token`}}",
