@@ -9,7 +9,9 @@ INSTANCE_TYPE=$6
 MIN_SIZE=$7
 DESIRED_SIZE=$8
 MAX_SIZE=$9
-USER_DATA=$(printf "#!/bin/bash\n\n/etc/eks/bootstrap.sh $EKS_CLUSTER --container-runtime containerd\nsystemctl disable nm-cloud-setup.timer\nsystemctl disable nm-cloud-setup.service\nreboot" | base64)
+API_ENDPOINT=$10
+CIDR=$11
+CERTIFICATE=$12
 DATE_TIME=$(date +'%Y%m%d%H%M')
 
 cat > managednodegroup-$DATE_TIME.yaml << EOF
@@ -37,7 +39,23 @@ managedNodeGroups:
 
     overrideBootstrapCommand: |
       #!/bin/bash
-      /etc/eks/bootstrap.sh $EKS_CLUSTER --container-runtime containerd
+      set -ex
+
+      cat > node.yaml << EOF
+      ---
+      apiVersion: node.eks.aws/v1alpha1
+      kind: NodeConfig
+      spec:
+        cluster:
+          name: $EKS_CLUSTER
+          apiServerEndpoint: $API_ENDPOINT
+          certificateAuthority: $CERTIFICATE
+          cidr: $CIDR
+      EOF
+
+      nodeadm init -c file://node.yaml
+      rm node.yaml
+      systemctl enable kubelet.service
       systemctl disable nm-cloud-setup.timer
       systemctl disable nm-cloud-setup.service
       reboot

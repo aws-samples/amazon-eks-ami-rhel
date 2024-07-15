@@ -1,12 +1,20 @@
 # Amazon EKS AMI RHEL Build Specification
 
-This repository contains resources and configuration scripts for building a custom Amazon EKS AMI running on Red Hat Enterprise Linux using [HashiCorp Packer](https://www.packer.io/). This is a forked version of the configuration that Amazon EKS uses to create the official Amazon EKS-optimized AMI.
+This repository contains resources and configuration scripts for building a
+custom Amazon EKS AMI running on Red Hat Enterprise Linux with [HashiCorp Packer](https://www.packer.io/). This is
+a forked version of the configuration that Amazon EKS uses to create the official Amazon EKS-optimized AMI.
 
-**Check out the AMI's [user guide](doc/USER_GUIDE.md) for more information.**
+**Check out the [📖 documentation](https://aws-samples.github.io/amazon-eks-ami-rhel/) to learn more.**
+
+---
 
 ## 🚀 Getting started
 
-If you are new to Amazon EKS, we recommend that you follow our [Getting Started](https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html) chapter in the Amazon EKS User Guide. If you already have a cluster, and you want to launch a node group with your new AMI, see [Launching Amazon EKS Worker Nodes](https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html).
+If you are new to Amazon EKS, we recommend that you follow
+our [Getting Started](https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html)
+chapter in the Amazon EKS User Guide. If you already have a cluster, and you
+want to launch a node group with your new AMI, see [Launching Amazon EKS Worker
+Nodes](https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html).
 
 ## 🔢 Pre-requisites
 
@@ -81,19 +89,25 @@ git clone https://github.com/aws-samples/amazon-eks-ami-rhel.git && cd amazon-ek
 
 ## 👷 Building the AMI
 
-A Makefile is provided to build the Amazon EKS Worker AMI, but it is just a small wrapper around invoking Packer directly. You can initiate the build process by running the following command in the root of this repository:
-```bash
-# Example for building an AMI off of the latest RHEL 8.9 AMI for Kubernetes version 1.29
-make k8s=1.29
+A Makefile is provided to build the Amazon EKS Worker AMI, but it is just a small wrapper around
+invoking Packer directly. You can initiate the build process by running the
+following command in the root of this repository:
 
-# Example for building an AMI off of the latest RHEL 8.9 AMI for Kubernetes version 1.28 in us-gov-east-1 region
-make k8s=1.28 ami_regions=us-gov-east-1 aws_region=us-gov-east-1
+```bash
+# Example for building an AMI with the latest Kubernetes version and the latest RHEL 8.9 AMI
+make
+
+# Example for building an AMI with the latest Kubernetes version and the latest RHEL 8.9 AMI in us-gov-east-1 region
+make k8s=1.29 ami_regions=us-gov-east-1 aws_region=us-gov-east-1
 
 # Example for building an AMI off of the latest RHEL 9.0.0 AMI in us-east-2 region
-make k8s=1.28 source_ami_filter_name=RHEL-9.0.0_HVM-2023*-x86_64-* ami_regions=us-east-2 aws_region=us-east-2
+make k8s=1.29 source_ami_filter_name=RHEL-9.0.0_HVM-2023*-x86_64-* ami_regions=us-east-2 aws_region=us-east-2
 
 # Example for building a customized DISA STIG compliant AMI, owned by a specific AWS Account in AWS GovCloud us-gov-east-1 region, with binaries stored in a private S3 bucket, an IAM instance profile attached, and using AWS Systems Manager Session Manager for Packer terminal access.
-make k8s=1.28 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_regions=us-gov-east-1 aws_region=us-gov-east-1 binary_bucket_name=my-eks-bucket binary_bucket_region=us-gov-east-1 iam_role=EC2Role pull_cni_from_github=false ssh_interface=session_manager
+make k8s=1.29 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_regions=us-gov-east-1 aws_region=us-gov-east-1 binary_bucket_name=my-eks-bucket binary_bucket_region=us-gov-east-1 iam_role=EC2Role pull_cni_from_github=false ssh_interface=session_manager
+
+# Check default value and options in help doc
+make help
 ```
 
 The Makefile chooses a particular kubelet binary to use per Kubernetes version which you can [view here](Makefile).
