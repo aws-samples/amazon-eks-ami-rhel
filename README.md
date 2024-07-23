@@ -123,6 +123,9 @@ make help
 The Makefile chooses a particular kubelet binary to use per Kubernetes version which you can [view here](Makefile).
 
 > **Note**
+> There is a network routing issue caused by the nm-cloud-setup service that comes preinstalled on RHEL machines. In the AWS [Blog](https://aws.amazon.com/blogs/containers/run-amazon-eks-on-rhel-worker-nodes-with-ipvs-networking), we demonstrate how to disable this service and reboot the EC2 instances as recommended by Red Hat in the following KB [article](https://access.redhat.com/solutions/6319811).
+
+> **Note**
 > The default instance type to build this AMI does not qualify for the AWS free tier.
 > You are charged for any instances created when building this AMI.
 
