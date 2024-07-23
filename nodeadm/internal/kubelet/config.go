@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"dario.cat/mergo"
-
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 
@@ -191,11 +189,6 @@ func (ksc *kubeletConfig) withOutpostSetup(cfg *api.NodeConfig) error {
 			ipHostMappings = append(ipHostMappings, fmt.Sprintf("%s\t%s", ip, apiUrl.Host))
 		}
 		output := strings.Join(ipHostMappings, "\n") + "\n"
-
-		if err != nil {
-			return err
-		}
-
 		// append to /etc/hosts file with shuffled mappings of "IP address to API server domain name"
 		f, err := os.OpenFile("/etc/hosts", os.O_APPEND|os.O_WRONLY, kubeletConfigPerm)
 		if err != nil {
@@ -249,7 +242,16 @@ func (ksc *kubeletConfig) withCloudProvider(kubeletVersion string, cfg *api.Node
 		flags["cloud-provider"] = "external"
 		// provider ID needs to be specified when the cloud provider is external
 		ksc.ProviderID = ptr.String(getProviderId(cfg.Status.Instance.AvailabilityZone, cfg.Status.Instance.ID))
-		// TODO set the --hostname-override equal to the EC2 PrivateDnsName
+		var nodeName string
+		if api.IsFeatureEnabled(api.InstanceIdNodeName, cfg.Spec.FeatureGates) {
+			zap.L().Info("Opt-in Instance Id naming strategy")
+			nodeName = cfg.Status.Instance.ID
+		} else {
+			// the name of the Node object default to EC2 PrivateDnsName
+			// see: https://github.com/awslabs/amazon-eks-ami/pull/1264
+			nodeName = cfg.Status.Instance.PrivateDNSName
+		}
+		flags["hostname-override"] = nodeName
 	} else {
 		flags["cloud-provider"] = "aws"
 	}
@@ -329,7 +331,7 @@ func (k *kubelet) writeKubeletConfigToFile(cfg *api.NodeConfig) error {
 
 	var kubeletConfigBytes []byte
 	if cfg.Spec.Kubelet.Config != nil && len(cfg.Spec.Kubelet.Config) > 0 {
-		mergedMap, err := util.DocumentMerge(kubeletConfig, cfg.Spec.Kubelet.Config, mergo.WithOverride)
+		mergedMap, err := util.Merge(kubeletConfig, cfg.Spec.Kubelet.Config, json.Marshal, json.Unmarshal)
 		if err != nil {
 			return err
 		}
@@ -377,22 +379,21 @@ func (k *kubelet) writeKubeletConfigToDir(cfg *api.NodeConfig) error {
 		k.flags["config-dir"] = dirPath
 
 		zap.L().Info("Enabling kubelet config drop-in dir..")
-		k.setEnv("KUBELET_CONFIG_DROPIN_DIR_ALPHA", "on")
+		k.environment["KUBELET_CONFIG_DROPIN_DIR_ALPHA"] = "on"
 		filePath := path.Join(dirPath, "00-nodeadm.conf")
 
 		// merge in default type metadata like kind and apiVersion in case the
 		// user has not specified this, as it is required to qualify a drop-in
 		// config as a valid KubeletConfiguration
-		userKubeletConfigMap, err := util.DocumentMerge(defaultKubeletSubConfig().TypeMeta, cfg.Spec.Kubelet.Config)
+		userKubeletConfigMap, err := util.Merge(defaultKubeletSubConfig().TypeMeta, cfg.Spec.Kubelet.Config, json.Marshal, json.Unmarshal)
 		if err != nil {
 			return err
 		}
-
-		zap.L().Info("Writing user kubelet config to drop-in file..", zap.String("path", filePath))
 		userKubeletConfigBytes, err := json.MarshalIndent(userKubeletConfigMap, "", strings.Repeat(" ", 4))
 		if err != nil {
 			return err
 		}
+		zap.L().Info("Writing user kubelet config to drop-in file..", zap.String("path", filePath))
 		if err := util.WriteFileWithDir(filePath, userKubeletConfigBytes, kubeletConfigPerm); err != nil {
 			return err
 		}

@@ -8,6 +8,16 @@ a forked version of the configuration that Amazon EKS uses to create the officia
 
 ---
 
+## 🔔 Announcements
+
+### This code base now follows the Amazon Linux 2023 custom EKS AMI code base
+
+This code base has always followed the [awslabs amazon-eks-ami](https://github.com/awslabs/amazon-eks-ami) code base as closely as possible.
+* Significant changes were made to that upstream code base to provide EKS support for Amazon Linux 2023.
+* Because Amazon Linux 2 is now under extended support, this code base will now follow the Amazon Linux 2023 code base of the upstream repository.
+* The [scripts for creating worker node groups](https://aws-samples.github.io/amazon-eks-ami-rhel/nodegroups/) have been modified to account for how worker nodes join EKS clusters under the new process.
+* The previous code base, which was based on Amazon Linux 2 build scripts, will remain available under the [al2-base branch](https://github.com/aws-samples/amazon-eks-ami-rhel/tree/al2-base).
+
 ## 🚀 Getting started
 
 If you are new to Amazon EKS, we recommend that you follow
@@ -103,8 +113,8 @@ make k8s=1.29 ami_regions=us-gov-east-1 aws_region=us-gov-east-1
 # Example for building an AMI off of the latest RHEL 9.0.0 AMI in us-east-2 region
 make k8s=1.29 source_ami_filter_name=RHEL-9.0.0_HVM-2023*-x86_64-* ami_regions=us-east-2 aws_region=us-east-2
 
-# Example for building a customized DISA STIG compliant AMI, owned by a specific AWS Account in AWS GovCloud us-gov-east-1 region, with binaries stored in a private S3 bucket, an IAM instance profile attached, and using AWS Systems Manager Session Manager for Packer terminal access.
-make k8s=1.29 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_regions=us-gov-east-1 aws_region=us-gov-east-1 binary_bucket_name=my-eks-bucket binary_bucket_region=us-gov-east-1 iam_role=EC2Role pull_cni_from_github=false ssh_interface=session_manager
+# Example for building a customized DISA STIG compliant AMI, owned by a specific AWS Account in AWS GovCloud us-gov-east-1 region, with binaries stored in a private S3 bucket, an IAM instance profile attached, a user data script to install the AWS Systems Manager agent, and using AWS Systems Manager Session Manager for Packer terminal access.
+make k8s=1.29 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_regions=us-gov-east-1 aws_region=us-gov-east-1 binary_bucket_name=my-eks-bucket binary_bucket_region=us-gov-east-1 iam_instance_profile=EC2Role pull_cni_from_github=false ssh_interface=session_manager user_data_file=/path/to/ssm_install.txt
 
 # Check default value and options in help doc
 make help

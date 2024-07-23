@@ -3,12 +3,13 @@ package kubelet
 import (
 	"context"
 	_ "embed"
+	"strconv"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/awslabs/amazon-eks-ami/nodeadm/internal/util"
 	"go.uber.org/zap"
-	"strconv"
-	"strings"
 )
 
 // default value from kubelet
@@ -46,9 +47,7 @@ func init() {
 }
 
 // CalcMaxPods handle the edge case when instance type is not present in MaxPodsPerInstanceType
-// The behavior should align with AL2:
-// https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh#L514
-// which essentially is
+// The behavior should align with AL2, which essentially is:
 //
 //	# of ENI * (# of IPv4 per ENI - 1) + 2
 func CalcMaxPods(awsRegion string, instanceType string) int32 {

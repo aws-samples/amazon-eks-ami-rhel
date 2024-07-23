@@ -38,7 +38,7 @@ def update_doc(doc: str, template_path: str) -> str:
     for var, val in all_vars.items():
         if val is not None:
             if val == "":
-                val = f"`\"\"`"
+                val = "`\"\"`"
             else:
                 val = f"```{val}```"
         else:
@@ -51,7 +51,7 @@ def update_doc(doc: str, template_path: str) -> str:
     new_doc = re.sub(table_pattern, "\n".join([boundary, *new_table_lines, boundary]), doc)
     return new_doc
 
-for template in ['al2', 'al2023', 'rhel']:
+for template in ['rhel']:
     doc_file_name = f'../doc/usage/{template}.md'
     with open(doc_file_name) as doc_file:
         doc = doc_file.read()

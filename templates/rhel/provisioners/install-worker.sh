@@ -150,14 +150,14 @@ echo "AWS credentials available: ${AWS_CREDS_OK}"
 ###############################################################################
 
 sudo dnf install -y runc-${RUNC_VERSION}
-sudo yum install -y container-selinux-${CONTAINER_SELINUX_VERSION}
+sudo dnf install -y container-selinux-${CONTAINER_SELINUX_VERSION}
 
 CONTAINERD_LATEST=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
 CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
 sudo wget $CONTAINERD_DOWNLOAD_URL
-tar xf containerd*.tar.gz
-sudo cp bin/* /usr/bin/
-# sudo yum install -y containerd.io-${CONTAINERD_VERSION}
+sudo tar Cxzvvf /usr containerd*.tar.gz
+sudo systemctl daemon-reload
+sudo systemctl enable --now containerd
 
 ###############################################################################
 ### Nerdctl setup #############################################################
@@ -167,8 +167,7 @@ sudo cp bin/* /usr/bin/
 NERDCTL_LATEST=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
 NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
 sudo wget $NERDCTL_DOWNLOAD_URL
-tar xf nerdctl*.tar.gz
-sudo cp nerdctl /usr/bin/
+sudo tar Cxzvvf /usr/bin nerdctl*.tar.gz
 
 # TODO: are these necessary? What do they do?
 sudo dnf install -y device-mapper-persistent-data lvm2
@@ -190,6 +189,8 @@ elif [ "$BINARY_BUCKET_REGION" = "us-iso-east-1" ] || [ "$BINARY_BUCKET_REGION" 
   S3_DOMAIN="c2s.ic.gov"
 elif [ "$BINARY_BUCKET_REGION" = "us-isob-east-1" ]; then
   S3_DOMAIN="sc2s.sgov.gov"
+elif [ "$BINARY_BUCKET_REGION" = "eu-isoe-west-1" ]; then
+  S3_DOMAIN="cloud.adc-e.uk"
 fi
 S3_URL_BASE="https://$BINARY_BUCKET_NAME.s3.$BINARY_BUCKET_REGION.$S3_DOMAIN/$KUBERNETES_VERSION/$KUBERNETES_BUILD_DATE/bin/linux/$ARCH"
 S3_PATH="s3://$BINARY_BUCKET_NAME/$KUBERNETES_VERSION/$KUBERNETES_BUILD_DATE/bin/linux/$ARCH"
@@ -255,7 +256,6 @@ else
     SSM_AGENT_VERSION="latest"
     echo "Installing amazon-ssm-agent@${SSM_AGENT_VERSION} from S3"
     sudo dnf install -y https://s3.${BINARY_BUCKET_REGION}.${S3_DOMAIN}/amazon-ssm-${BINARY_BUCKET_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
-
   fi
 fi
 
@@ -287,9 +287,3 @@ sudo semanage fcontext -a -t bin_t -s system_u "/etc/eks(/.*)?"
 sudo restorecon -R -vF /etc/eks
 sudo semanage fcontext -a -t kubelet_exec_t -s system_u /usr/bin/kubelet
 sudo restorecon -vF /usr/bin/kubelet
-# sudo semanage fcontext -a -t bin_t -s system_u /usr/bin/aws-iam-authenticator
-# sudo restorecon -vF /usr/bin/aws-iam-authenticator
-
-echo "**************************************************************"
-echo "All Done!"
-echo "**************************************************************"

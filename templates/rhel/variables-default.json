@@ -1,5 +1,4 @@
 {
-    "additional_yum_repos": "repo=docker-ce-stable,name=Docker CE Stable - $basearch,baseurl=https://download.docker.com/linux/centos/$releasever/$basearch/stable,gpgkey=https://download.docker.com/linux/centos/gpg",
     "ami_component_description": "(k8s: {{ user `kubernetes_version` }}, containerd: {{ user `containerd_version` }})",
     "ami_description": "EKS Kubernetes node based on Red Hat Enterprise Linux",
     "ami_regions": "",
@@ -32,6 +31,7 @@
     "ssm_agent_version": "",
     "subnet_id": "",
     "temporary_security_group_source_cidrs": "",
+    "user_data_file": null,
     "volume_type": "gp3",
     "vpc_id": "",
     "working_dir": "{{user `remote_folder`}}/worker"

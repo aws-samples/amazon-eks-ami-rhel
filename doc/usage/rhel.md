@@ -5,7 +5,6 @@
 <!-- template-variable-table-boundary -->
 | Variable | Description |
 | - | - |
-| `additional_yum_repos` |  |
 | `ami_component_description` |  |
 | `ami_description` |  |
 | `ami_name` |  |
@@ -23,7 +22,7 @@
 | `creator` |  |
 | `enable_fips` | Install openssl and enable fips related kernel parameters |
 | `encrypted` |  |
-| `iam_instance_profile` |  |
+| `iam_instance_profile` | The name of an IAM instance profile to launch the EC2 instance with. |
 | `instance_type` |  |
 | `kms_key_id` |  |
 | `kubernetes_build_date` |  |
@@ -36,12 +35,13 @@
 | `source_ami_filter_name` |  |
 | `source_ami_id` |  |
 | `source_ami_owners` |  |
-| `ssh_interface` |  |
+| `ssh_interface` | If using ```session_manager```, you need to ensure your AMI has the SSM agent installed as the default RHEL AMIs do not have the SSM agent installed. This can be achieved through a user_data_file script. |
 | `ssh_username` |  |
-| `ssm_agent_version` | Version of the SSM agent to install from the S3 bucket provided by the SSM agent project, such as ```latest```. If empty, the latest version of the SSM agent available in the Amazon Linux core repositories will be installed. |
+| `ssm_agent_version` | Version of the SSM agent to install from the S3 bucket provided by the SSM agent project, such as ```latest```. If empty, the latest version of the SSM agent available will be installed. |
 | `subnet_id` |  |
 | `temporary_key_pair_type` |  |
 | `temporary_security_group_source_cidrs` |  |
+| `user_data_file` | Path to a file that will be used for the user data when launching the instance. |
 | `volume_type` |  |
 | `vpc_id` |  |
 | `working_dir` | Directory path for ephemeral resources on the builder instance |

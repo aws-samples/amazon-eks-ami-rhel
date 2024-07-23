@@ -1,7 +1,6 @@
 {
   "_comment": "All template variables are enumerated here; and most variables have a default value defined in a variables.json for each kubernetes minor version",
   "variables": {
-    "additional_yum_repos": null,
     "ami_component_description": null,
     "ami_description": null,
     "ami_name": null,
@@ -40,6 +39,7 @@
     "subnet_id": null,
     "temporary_key_pair_type": "ed25519",
     "temporary_security_group_source_cidrs": null,
+    "user_data_file": null,
     "volume_type": null,
     "vpc_id": null,
     "working_dir": null
@@ -115,7 +115,8 @@
       "ami_description": "{{ user `ami_description` }}, {{ user `ami_component_description` }}",
       "metadata_options": {
         "http_tokens": "required"
-      }
+      },
+      "user_data_file": "{{user `user_data_file`}}"
     }
   ],
   "provisioners": [
@@ -126,14 +127,6 @@
         "mkdir -p {{user `working_dir`}}/shared",
         "mkdir -p {{user `working_dir`}}/log-collector-script",
         "mkdir -p {{user `working_dir`}}/nodeadm"
-      ]
-    },
-    {
-      "type": "shell",
-      "remote_folder": "{{ user `remote_folder`}}",
-      "script": "{{template_dir}}/provisioners/install_additional_repos.sh",
-      "environment_vars": [
-        "ADDITIONAL_YUM_REPOS={{user `additional_yum_repos`}}"
       ]
     },
     {
@@ -200,7 +193,7 @@
         "CONTAINERD_VERSION={{user `containerd_version`}}",
         "KUBERNETES_BUILD_DATE={{user `kubernetes_build_date`}}",
         "KUBERNETES_VERSION={{user `kubernetes_version`}}",
-	    "NERDCTL_URL={{user `nerdctl_url`}}",
+	"NERDCTL_URL={{user `nerdctl_url`}}",
         "RUNC_VERSION={{user `runc_version`}}",
         "SSM_AGENT_VERSION={{user `ssm_agent_version`}}",
         "WORKING_DIR={{user `working_dir`}}"
@@ -212,14 +205,6 @@
       "script": "{{template_dir}}/provisioners/install-nodeadm.sh",
       "environment_vars": [
         "PROJECT_DIR={{user `working_dir`}}/nodeadm"
-      ]
-    },
-    {
-      "type": "shell",
-      "remote_folder": "{{ user `remote_folder`}}",
-      "script": "{{template_dir}}/provisioners/cleanup_additional_repos.sh",
-      "environment_vars": [
-        "ADDITIONAL_YUM_REPOS={{user `additional_yum_repos`}}"
       ]
     },
     {
