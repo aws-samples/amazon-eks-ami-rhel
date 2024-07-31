@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 EKS_CLUSTER=$1
 AMI_ID=$2
@@ -22,7 +22,7 @@ public_subnets=""
 private_subnets=""
 
 # Loop through subnets and determine if they are public or private
-for subnet in ${=subnets}; do
+for subnet in $subnets; do
   cleaned_subnet=$(echo $subnet | tr -d '[]",')
 
   if [ -n "$cleaned_subnet" ]; then
