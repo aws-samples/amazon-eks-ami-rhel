@@ -21,6 +21,7 @@
     "enable_fips": null,
     "encrypted": null,
     "iam_instance_profile": null,
+    "enable_efa": null,
     "instance_type": null,
     "kms_key_id": null,
     "kubernetes_build_date": null,
@@ -84,7 +85,7 @@
       ],
       "aws_polling": {
         "delay_seconds": 30,
-        "max_attempts": 90
+        "max_attempts": 480
       },
       "ami_regions": "{{user `ami_regions`}}",
       "ssh_username": "{{user `ssh_username`}}",
@@ -179,6 +180,14 @@
     },
     {
       "type": "shell",
+      "expect_disconnect": true,
+      "script": "{{template_dir}}/provisioners/limit-c-states.sh",
+      "environment_vars": [
+        "ENABLE_EFA={{user `enable_efa`}}"
+      ]
+    },
+    {
+      "type": "shell",
       "remote_folder": "{{ user `remote_folder`}}",
       "script": "{{template_dir}}/provisioners/install-worker.sh",
       "environment_vars": [
@@ -205,6 +214,15 @@
       "script": "{{template_dir}}/provisioners/install-nodeadm.sh",
       "environment_vars": [
         "PROJECT_DIR={{user `working_dir`}}/nodeadm"
+      ]
+    },
+    {
+      "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
+      "script": "{{template_dir}}/provisioners/install-efa.sh",
+      "environment_vars": [
+        "AWS_REGION={{user `aws_region`}}",
+        "ENABLE_EFA={{user `enable_efa`}}"
       ]
     },
     {

@@ -14,6 +14,7 @@
     "containerd_url": "https://api.github.com/repos/containerd/containerd/releases/latest",
     "containerd_version": "*",
     "creator": "{{env `USER`}}",
+    "enable_efa": "false",
     "enable_fips": "false",
     "encrypted": "false",
     "iam_instance_profile": "",

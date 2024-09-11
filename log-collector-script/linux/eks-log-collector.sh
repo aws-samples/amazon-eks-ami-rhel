@@ -20,7 +20,7 @@ export LANG="C"
 export LC_ALL="C"
 
 # Global options
-readonly PROGRAM_VERSION="0.7.6"
+readonly PROGRAM_VERSION="0.7.8"
 readonly PROGRAM_SOURCE="https://github.com/aws-samples/amazon-eks-ami-rhel/blob/main/log-collector-script/"
 readonly PROGRAM_NAME="$(basename "$0" .sh)"
 readonly PROGRAM_DIR="/opt/log-collector"
@@ -63,6 +63,7 @@ COMMON_DIRECTORIES=(
   kubelet       # eks
   nodeadm       # eks
   cni           # eks
+  gpu           # eks
 )
 
 COMMON_LOGS=(
@@ -71,6 +72,7 @@ COMMON_LOGS=(
   aws-routed-eni # eks
   containers     # eks
   pods           # eks
+  cron
   cloud-init.log
   cloud-init-output.log
   user-data.log
@@ -281,10 +283,13 @@ collect() {
   get_networking_info
   get_cni_config
   get_cni_configuration_variables
+  get_network_policy_ebpf_info
   get_docker_logs
   get_sandboxImage_info
   get_cpu_throttled_processes
   get_io_throttled_processes
+  get_reboot_history
+  get_nvidia_bug_report
 }
 
 pack() {
@@ -310,6 +315,7 @@ get_mounts_info() {
   lvs > "${COLLECT_DIR}"/storage/lvs.txt
   pvs > "${COLLECT_DIR}"/storage/pvs.txt
   vgs > "${COLLECT_DIR}"/storage/vgs.txt
+  cp --force /etc/fstab "${COLLECT_DIR}"/storage/fstab.txt
   mount -t xfs | awk '{print $1}' | xargs -I{} -- sh -c "xfs_info {}; xfs_db -r -c 'freesp -s' {}" > "${COLLECT_DIR}"/storage/xfs.txt
   mount | grep ^overlay | sed 's/.*upperdir=//' | sed 's/,.*//' | xargs -n 1 timeout 75 du -sh | grep -v ^0 > "${COLLECT_DIR}"/storage/pod_local_storage.txt
   ok
@@ -433,31 +439,33 @@ get_docker_logs() {
 get_k8s_info() {
   try "collect kubelet information"
 
-  if [[ -n "${KUBECONFIG:-}" ]]; then
-    command -v kubectl > /dev/null && kubectl get --kubeconfig="${KUBECONFIG}" svc > "${COLLECT_DIR}"/kubelet/svc.log
-    command -v kubectl > /dev/null && kubectl --kubeconfig="${KUBECONFIG}" config view --output yaml > "${COLLECT_DIR}"/kubelet/kubeconfig.yaml
+  find_kubeconfig() {
+    if [[ -n "${KUBECONFIG:-}" ]]; then
+      echo "${KUBECONFIG}"
+    elif [[ -f /etc/eksctl/kubeconfig.yaml ]]; then
+      echo "/etc/eksctl/kubeconfig.yaml"
+    elif [[ -f /etc/systemd/system/kubelet.service ]]; then
+      echo $(grep kubeconfig /etc/systemd/system/kubelet.service | awk '{print $2}')
+    elif [[ -f /var/lib/kubelet/kubeconfig ]]; then
+      echo "/var/lib/kubelet/kubeconfig"
+    else
+      echo ""
+    fi
+  }
 
-  elif [[ -f /etc/eksctl/kubeconfig.yaml ]]; then
-    KUBECONFIG="/etc/eksctl/kubeconfig.yaml"
-    command -v kubectl > /dev/null && kubectl get --kubeconfig="${KUBECONFIG}" svc > "${COLLECT_DIR}"/kubelet/svc.log
-    command -v kubectl > /dev/null && kubectl --kubeconfig="${KUBECONFIG}" config view --output yaml > "${COLLECT_DIR}"/kubelet/kubeconfig.yaml
+  KUBECONFIG_PATH=$(find_kubeconfig)
 
-  elif [[ -f /etc/systemd/system/kubelet.service ]]; then
-    KUBECONFIG=$(grep kubeconfig /etc/systemd/system/kubelet.service | awk '{print $2}')
-    command -v kubectl > /dev/null && kubectl get --kubeconfig="${KUBECONFIG}" svc > "${COLLECT_DIR}"/kubelet/svc.log
-    command -v kubectl > /dev/null && kubectl --kubeconfig="${KUBECONFIG}" config view --output yaml > "${COLLECT_DIR}"/kubelet/kubeconfig.yaml
-
-  elif [[ -f /var/lib/kubelet/kubeconfig ]]; then
-    KUBECONFIG="/var/lib/kubelet/kubeconfig"
-    command -v kubectl > /dev/null && kubectl get --kubeconfig=${KUBECONFIG} svc > "${COLLECT_DIR}"/kubelet/svc.log
-    command -v kubectl > /dev/null && kubectl --kubeconfig=${KUBECONFIG} config view --output yaml > "${COLLECT_DIR}"/kubelet/kubeconfig.yaml
-
+  if [[ -n "${KUBECONFIG_PATH}" ]]; then
+    command -v kubectl > /dev/null && kubectl get --kubeconfig="${KUBECONFIG_PATH}" svc > "${COLLECT_DIR}"/kubelet/svc.log
+    command -v kubectl > /dev/null && kubectl --kubeconfig="${KUBECONFIG_PATH}" config view --output yaml > "${COLLECT_DIR}"/kubelet/kubeconfig.yaml
   else
     echo "======== Unable to find KUBECONFIG, IGNORING POD DATA =========" >> "${COLLECT_DIR}"/kubelet/svc.log
   fi
 
   # Try to copy the kubeconfig file if kubectl command doesn't exist
-  [[ (! -f "${COLLECT_DIR}/kubelet/kubeconfig.yaml") && (-n ${KUBECONFIG}) ]] && cp ${KUBECONFIG} "${COLLECT_DIR}"/kubelet/kubeconfig.yaml
+  if [[ ! -f "${COLLECT_DIR}/kubelet/kubeconfig.yaml" && -n "${KUBECONFIG_PATH}" ]]; then
+    cp "${KUBECONFIG_PATH}" "${COLLECT_DIR}/kubelet/kubeconfig.yaml"
+  fi
 
   case "${INIT_TYPE}" in
     systemd)
@@ -467,6 +475,8 @@ get_k8s_info() {
 
       cp --force --recursive --dereference /etc/kubernetes/kubelet/config.json "${COLLECT_DIR}"/kubelet/config.json 2> /dev/null
       cp --force --recursive --dereference /etc/kubernetes/kubelet/config.json.d "${COLLECT_DIR}"/kubelet/config.json.d 2> /dev/null
+
+      cp --force --recursive --dereference /etc/kubernetes/kubelet/kubelet-config.json "${COLLECT_DIR}"/kubelet/kubelet-config.json 2> /dev/null
       ;;
     snap)
       timeout 75 snap logs kubelet-eks -n all > "${COLLECT_DIR}"/kubelet/kubelet.log
@@ -533,6 +543,18 @@ get_sysctls_info() {
   # dump all sysctls
   sysctl --all >> "${COLLECT_DIR}"/sysctls/sysctl_all.txt 2> /dev/null
 
+  ok
+}
+
+get_network_policy_ebpf_info() {
+  try "collect network policy ebpf loaded data"
+  echo "*** EBPF loaded data ***" >> "${COLLECT_DIR}"/networking/ebpf-data.txt
+  LOADED_EBPF=$(/opt/cni/bin/aws-eks-na-cli ebpf loaded-ebpfdata | tee -a "${COLLECT_DIR}"/networking/ebpf-data.txt)
+
+  for mapid in $(echo "$LOADED_EBPF" | grep "Map ID:" | sed 's/Map ID: \+//' | sort | uniq); do
+    echo "*** EBPF Maps Data for Map ID $mapid ***" >> "${COLLECT_DIR}"/networking/ebpf-maps-data.txt
+    /opt/cni/bin/aws-eks-na-cli ebpf dump-maps $mapid >> "${COLLECT_DIR}"/networking/ebpf-maps-data.txt
+  done
   ok
 }
 
@@ -677,6 +699,16 @@ get_system_services() {
   timeout 75 cat /proc/stat > "${COLLECT_DIR}"/system/procstat.txt 2>&1
   timeout 75 cat /proc/[0-9]*/stat > "${COLLECT_DIR}"/system/allprocstat.txt 2>&1
 
+  # collect pids which have large environments
+  echo -e "PID\tCount" > "${COLLECT_DIR}/system/large_environments.txt"
+  for i in /proc/*/environ; do
+    ENV_COUNT=$(tr '\0' '\n' < "$i" | grep -cv '^$')
+    if ((ENV_COUNT > 1000)); then
+      PID=$(echo "$i" | sed 's#/proc/##' | sed 's#/environ##')
+      echo -e "${PID}\t${ENV_COUNT}" >> "${COLLECT_DIR}/system/large_environments.txt"
+    fi
+  done
+
   ok
 }
 
@@ -766,6 +798,22 @@ get_io_throttled_processes() {
   # column 42 is Aggregated block I/O delays, measured in centiseconds so we capture the non-zero block
   # I/O delays.
   command cut -d" " -f 1,2,42 /proc/[0-9]*/stat | sort -n -k+3 -r | grep -v 0$ >> ${IO_THROTTLE_LOG}
+  ok
+}
+
+get_reboot_history() {
+  try "Collect reboot history"
+  timeout 75 last reboot > "${COLLECT_DIR}"/system/last_reboot.txt 2>&1 || echo -e "\tTimed out, ignoring \"reboot history output \" "
+  ok
+}
+
+get_nvidia_bug_report() {
+  try "Collect Nvidia Bug report"
+  if ! command -v nvidia-bug-report.sh &> /dev/null; then
+    echo "No Nvidia drivers found, nothing to do."
+  else
+    timeout 75 nvidia-bug-report.sh --output-file "${COLLECT_DIR}"/gpu/nvidia-bug-report.log &> /dev/null
+  fi
   ok
 }
 
