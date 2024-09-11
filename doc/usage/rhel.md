@@ -23,6 +23,7 @@
 | `enable_fips` | Install openssl and enable fips related kernel parameters |
 | `encrypted` |  |
 | `iam_instance_profile` | The name of an IAM instance profile to launch the EC2 instance with. |
+| `enable_efa` | Valid options are ```true``` or ```false```. Wheather or not to install the software needed to use AWS Elastic Fabric Adapter (EFA) network interfaces. |
 | `instance_type` |  |
 | `kms_key_id` |  |
 | `kubernetes_build_date` |  |

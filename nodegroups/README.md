@@ -4,9 +4,9 @@ This directory contains sample scripts for creating EKS worker node groups after
 
 ## 🔔 Announcements
 
-### Worker nodes are now joined to EKS clusters using [nodeadm](../nodeadm/README.md)
+### Worker nodes are now joined to EKS clusters using [nodeadm](nodeadm/README.md)
 
-The new method of joining EKS clusters using [nodeadm](../nodeadm/README.md) is significantly different than the deprecated bootstrap.sh script method. For this reason, some sample scripts have been provided here to get you started.
+The new method of joining EKS clusters using [nodeadm](nodeadm/README.md) is significantly different than the deprecated bootstrap.sh script method. For this reason, some sample scripts have been provided here to get you started.
 
 > **Note**
 > These changes require functionality that is not curently available using [eksctl](https://eksctl.io/), so for now any scripts that reference eksctl are not working. A bug report has been submitted to address this issue.
