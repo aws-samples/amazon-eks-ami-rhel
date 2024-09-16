@@ -152,8 +152,11 @@ echo "AWS credentials available: ${AWS_CREDS_OK}"
 sudo dnf install -y runc-${RUNC_VERSION}
 sudo dnf install -y container-selinux-${CONTAINER_SELINUX_VERSION}
 
-CONTAINERD_LATEST=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
-CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+CONTAINERD_DOWNLOAD_URL=$CONTAINERD_URL
+if [ "$CONTAINERD_VERSION" == "*" ]; then
+  CONTAINERD_LATEST=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
+  CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+fi
 sudo wget $CONTAINERD_DOWNLOAD_URL
 sudo tar Cxzvvf /usr containerd*.tar.gz
 sudo systemctl daemon-reload
