@@ -51,7 +51,7 @@ type PutRegistryPolicyOutput struct {
 	// The JSON policy text for your registry.
 	PolicyText *string
 
-	// The registry ID associated with the request.
+	// The registry ID.
 	RegistryId *string
 
 	// Metadata pertaining to the operation's result.

@@ -11,6 +11,7 @@ import (
 	smithytime "github.com/aws/smithy-go/time"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	smithywaiter "github.com/aws/smithy-go/waiter"
+	jmespath "github.com/jmespath/go-jmespath"
 	"time"
 )
 
@@ -410,18 +411,29 @@ func (w *SnapshotCompletedWaiter) WaitForOutput(ctx context.Context, params *Des
 func snapshotCompletedStateRetryable(ctx context.Context, input *DescribeSnapshotsInput, output *DescribeSnapshotsOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.Snapshots
-		var v2 []types.SnapshotState
-		for _, v := range v1 {
-			v3 := v.State
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Snapshots[].State", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
+
 		expectedValue := "completed"
-		match := len(v2) > 0
-		for _, v := range v2 {
-			if string(v) != expectedValue {
+		var match = true
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		if len(listOfValues) == 0 {
+			match = false
+		}
+		for _, v := range listOfValues {
+			value, ok := v.(types.SnapshotState)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.SnapshotState value, got %T", pathValue)
+			}
+
+			if string(value) != expectedValue {
 				match = false
-				break
 			}
 		}
 
@@ -431,23 +443,26 @@ func snapshotCompletedStateRetryable(ctx context.Context, input *DescribeSnapsho
 	}
 
 	if err == nil {
-		v1 := output.Snapshots
-		var v2 []types.SnapshotState
-		for _, v := range v1 {
-			v3 := v.State
-			v2 = append(v2, v3)
-		}
-		expectedValue := "error"
-		var match bool
-		for _, v := range v2 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		pathValue, err := jmespath.Search("Snapshots[].State", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		expectedValue := "error"
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		for _, v := range listOfValues {
+			value, ok := v.(types.SnapshotState)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.SnapshotState value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 

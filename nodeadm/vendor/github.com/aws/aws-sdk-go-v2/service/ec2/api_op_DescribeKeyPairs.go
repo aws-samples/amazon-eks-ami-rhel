@@ -13,6 +13,7 @@ import (
 	smithytime "github.com/aws/smithy-go/time"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	smithywaiter "github.com/aws/smithy-go/waiter"
+	jmespath "github.com/jmespath/go-jmespath"
 	"strconv"
 	"time"
 )
@@ -332,23 +333,22 @@ func (w *KeyPairExistsWaiter) WaitForOutput(ctx context.Context, params *Describ
 func keyPairExistsStateRetryable(ctx context.Context, input *DescribeKeyPairsInput, output *DescribeKeyPairsOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.KeyPairs
-		var v2 []string
-		for _, v := range v1 {
-			v3 := v.KeyName
-			if v3 != nil {
-				v2 = append(v2, *v3)
-			}
+		pathValue, err := jmespath.Search("length(KeyPairs[].KeyName) > `0`", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
-		v4 := len(v2)
-		v5 := 0
-		v6 := int64(v4) > int64(v5)
+
 		expectedValue := "true"
 		bv, err := strconv.ParseBool(expectedValue)
 		if err != nil {
 			return false, fmt.Errorf("error parsing boolean from string %w", err)
 		}
-		if v6 == bv {
+		value, ok := pathValue.(bool)
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected bool value got %T", pathValue)
+		}
+
+		if value == bv {
 			return false, nil
 		}
 	}

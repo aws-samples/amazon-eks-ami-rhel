@@ -109,7 +109,7 @@ func (a *networkingAspect) generateEKSPrimaryENIOnlyConfiguration(cfg *api.NodeC
 }
 
 func (a *networkingAspect) reloadNetworkConfigurations() error {
-	cmd := exec.Command("networkctl", "reload")
+	cmd := exec.Command("nmcli", "connection", "reload")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

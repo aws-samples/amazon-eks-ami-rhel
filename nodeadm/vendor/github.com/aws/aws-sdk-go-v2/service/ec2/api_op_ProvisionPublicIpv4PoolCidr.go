@@ -39,7 +39,7 @@ type ProvisionPublicIpv4PoolCidrInput struct {
 	IpamPoolId *string
 
 	// The netmask length of the CIDR you would like to allocate to the public IPv4
-	// pool. The least specific netmask length you can define is 24.
+	// pool.
 	//
 	// This member is required.
 	NetmaskLength *int32

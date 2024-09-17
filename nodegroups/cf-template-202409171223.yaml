@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'EKS Managed Nodes (SSH access: false)'
+Mappings:
+  ServicePrincipalPartitionMap:
+    aws:
+      EC2: ec2.amazonaws.com
+      EKS: eks.amazonaws.com
+      EKSFargatePods: eks-fargate-pods.amazonaws.com
+    aws-cn:
+      EC2: ec2.amazonaws.com.cn
+      EKS: eks.amazonaws.com
+      EKSFargatePods: eks-fargate-pods.amazonaws.com
+    aws-iso:
+      EC2: ec2.c2s.ic.gov
+      EKS: eks.amazonaws.com
+      EKSFargatePods: eks-fargate-pods.amazonaws.com
+    aws-iso-b:
+      EC2: ec2.sc2s.sgov.gov
+      EKS: eks.amazonaws.com
+      EKSFargatePods: eks-fargate-pods.amazonaws.com
+    aws-us-gov:
+      EC2: ec2.amazonaws.com
+      EKS: eks.amazonaws.com
+      EKSFargatePods: eks-fargate-pods.amazonaws.com
+Resources:
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        BlockDeviceMappings:
+          - DeviceName: /dev/sda1
+            Ebs:
+              Encrypted: false
+              Iops: 3000
+              Throughput: 125
+              VolumeSize: 80
+              VolumeType: gp3
+        ImageId: ami-06ae006d12599b66d
+        MetadataOptions:
+          HttpPutResponseHopLimit: 2
+          HttpTokens: required
+        SecurityGroupIds:
+          - "sg-0388eceac19108230"
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: rhel-eks-rhel-eks-nodeadm-Node
+              - Key: alpha.eksctl.io/nodegroup-type
+                Value: managed
+              - Key: nodegroup-name
+                Value: rhel-eks-nodeadm
+              - Key: alpha.eksctl.io/nodegroup-name
+                Value: rhel-eks-nodeadm
+          - ResourceType: volume
+            Tags:
+              - Key: Name
+                Value: rhel-eks-rhel-eks-nodeadm-Node
+              - Key: alpha.eksctl.io/nodegroup-type
+                Value: managed
+              - Key: nodegroup-name
+                Value: rhel-eks-nodeadm
+              - Key: alpha.eksctl.io/nodegroup-name
+                Value: rhel-eks-nodeadm
+          - ResourceType: network-interface
+            Tags:
+              - Key: Name
+                Value: rhel-eks-rhel-eks-nodeadm-Node
+              - Key: alpha.eksctl.io/nodegroup-type
+                Value: managed
+              - Key: nodegroup-name
+                Value: rhel-eks-nodeadm
+              - Key: alpha.eksctl.io/nodegroup-name
+                Value: rhel-eks-nodeadm
+        UserData:
+          Fn::Base64: !Sub |
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+            --BOUNDARY
+            Content-Type: application/node.eks.aws
+
+            ---
+            apiVersion: node.eks.aws/v1alpha1
+            kind: NodeConfig
+            spec:
+              cluster:
+                name: rhel-eks
+                apiServerEndpoint: "https://79A562354D04D21A2F4F052CBA7374F7.gr7.us-east-1.eks.amazonaws.com"
+                certificateAuthority: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJTk1aQmN3ZDRsMkl3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBeE1USXdORFF6TURsYUZ3MHpOREF4TURrd05EUTRNRGxhTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURjMmFKVjYwOHJzL2hSQ0dNc1RuQk9TblNhRDVnMFcvNG16Unl5QXpPb1gwY0Y0eXc5dnZlVFpRVWEKOCtHQVloUkhRb3NYdWZNQWhNUm5yWHc0ZSt4VUVwSmpQaFBMYnk1MjNKMGZ4M0NTK3R3SVN4Z2t5NzVYOXN5UwpaOWRoQ1YzVUVRbGY1a3dUdXZQVWlmdW16UEtzY3VaVWdXZXpQTEgzNG9WRFc0VGtrQzBDdFV5bldJN2hJMXpNCmFpQ2l1SDZGVlp4akswTGljK2U1WEt4eDJKUHBhak1veStiZkFFZ1lvemtWMThkVzc4TGdWUFU0cmZRSDVhS3UKc01OTmlsbWVyeHpQdDVWemNWUVhSYXltM091UmlHUWxPWVlGZVhjT0N1TmluRFJJNWFsNmx2UGQ0RmVWemdVTApRSkZaMWh2R1I2THljZmZYOHlzaCs3UkEzcHVsQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJTOHA2QXZ4b2FCc3FMVjB5MEJuVUhNTDlJUWNEQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQ1Rpa2xYS0lBLwpVVmFxK2hVbXhUcWQ5NENOYU0vMWZCTm9Xbm9HUjhDYlJwMFMwTWcrSVFvM2FFUGRVVnVNQnI3QUZZZEx0YjUyCmxScy9IVWVlTjYrTTNHbWgxbDBQQ0o3WFltZlhmQVRmQWIrQTlXYllFVFFzVG1LS0wyZ055NHlucFp2cTM0ekYKSEdscjl2UTJGaDhQU1N0c3hZSzB4N2U1cy9pZCtZNER3Nzd2bWdTbnFyeThEN2lvVGRvakpmYU5pTUQ1bEhhQgpEMnBxcGxrNko5UGZyTkk3RzFqNC9pVitmYlNxVFkyekllOTF1c0FNWEpSOWt1Nml4QU1nSnIxMzltdjZtOWQxCnRPcXVMNDFPTW9NY2FEUTMyM1F5Tmd6ZzFkQTFoR3ZJVVMrNXlDelAwNFl3VDJxczY3SEpZcFFOWFRhdVBKQ1EKWG5tU2hFQithaW5aCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+                cidr: "10.100.0.0/16"
+
+            --BOUNDARY
+            Content-Type: text/x-shellscript;
+
+            #!/bin/bash
+            set -ex
+            systemctl enable kubelet.service
+            systemctl disable nm-cloud-setup.timer
+            systemctl disable nm-cloud-setup.service
+            reboot
+
+            --BOUNDARY--
+      LaunchTemplateName: !Sub '${AWS::StackName}'
+  ManagedNodeGroup:
+    Type: AWS::EKS::Nodegroup
+    Properties:
+      ClusterName: rhel-eks
+      InstanceTypes:
+        - t3.medium
+      Labels:
+        alpha.eksctl.io/cluster-name: rhel-eks
+        alpha.eksctl.io/nodegroup-name: rhel-eks-nodeadm
+        role: worker
+      LaunchTemplate:
+        Id: !Ref 'LaunchTemplate'
+      NodeRole: !GetAtt 'NodeInstanceRole.Arn'
+      NodegroupName: rhel-eks-nodeadm
+      ScalingConfig:
+        MinSize: 3
+        DesiredSize: 3
+        MaxSize: 3
+      Subnets:
+        - subnet-0fe8d07a75b8a1d5b
+        - subnet-016b9395276b09613
+      Tags:
+        alpha.eksctl.io/nodegroup-name: rhel-eks-nodeadm
+        alpha.eksctl.io/nodegroup-type: managed
+        nodegroup-name: rhel-eks-nodeadm
+  NodeInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - !FindInMap
+                  - ServicePrincipalPartitionMap
+                  - !Ref 'AWS::Partition'
+                  - EC2
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonEKS_CNI_Policy'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      Path: /
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}/NodeInstanceRole'

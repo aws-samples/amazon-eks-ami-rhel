@@ -13,6 +13,7 @@ import (
 	smithytime "github.com/aws/smithy-go/time"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	smithywaiter "github.com/aws/smithy-go/waiter"
+	jmespath "github.com/jmespath/go-jmespath"
 	"strconv"
 	"time"
 )
@@ -736,16 +737,22 @@ func (w *InstanceExistsWaiter) WaitForOutput(ctx context.Context, params *Descri
 func instanceExistsStateRetryable(ctx context.Context, input *DescribeInstancesInput, output *DescribeInstancesOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.Reservations
-		v2 := len(v1)
-		v3 := 0
-		v4 := int64(v2) > int64(v3)
+		pathValue, err := jmespath.Search("length(Reservations[]) > `0`", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
+		}
+
 		expectedValue := "true"
 		bv, err := strconv.ParseBool(expectedValue)
 		if err != nil {
 			return false, fmt.Errorf("error parsing boolean from string %w", err)
 		}
-		if v4 == bv {
+		value, ok := pathValue.(bool)
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected bool value got %T", pathValue)
+		}
+
+		if value == bv {
 			return false, nil
 		}
 	}
@@ -925,28 +932,29 @@ func (w *InstanceRunningWaiter) WaitForOutput(ctx context.Context, params *Descr
 func instanceRunningStateRetryable(ctx context.Context, input *DescribeInstancesInput, output *DescribeInstancesOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
+
 		expectedValue := "running"
-		match := len(v5) > 0
-		for _, v := range v5 {
-			if string(v) != expectedValue {
+		var match = true
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		if len(listOfValues) == 0 {
+			match = false
+		}
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) != expectedValue {
 				match = false
-				break
 			}
 		}
 
@@ -956,95 +964,74 @@ func instanceRunningStateRetryable(ctx context.Context, input *DescribeInstances
 	}
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
+
 		expectedValue := "shutting-down"
-		var match bool
-		for _, v := range v5 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
+
 		expectedValue := "terminated"
-		var match bool
-		for _, v := range v5 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
-		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
-		expectedValue := "stopping"
-		var match bool
-		for _, v := range v5 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		expectedValue := "stopping"
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 
@@ -1223,28 +1210,29 @@ func (w *InstanceStoppedWaiter) WaitForOutput(ctx context.Context, params *Descr
 func instanceStoppedStateRetryable(ctx context.Context, input *DescribeInstancesInput, output *DescribeInstancesOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
+
 		expectedValue := "stopped"
-		match := len(v5) > 0
-		for _, v := range v5 {
-			if string(v) != expectedValue {
+		var match = true
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		if len(listOfValues) == 0 {
+			match = false
+		}
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) != expectedValue {
 				match = false
-				break
 			}
 		}
 
@@ -1254,64 +1242,50 @@ func instanceStoppedStateRetryable(ctx context.Context, input *DescribeInstances
 	}
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
-		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
-		expectedValue := "pending"
-		var match bool
-		for _, v := range v5 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		expectedValue := "pending"
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
-		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
-		expectedValue := "terminated"
-		var match bool
-		for _, v := range v5 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		expectedValue := "terminated"
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 
@@ -1478,28 +1452,29 @@ func (w *InstanceTerminatedWaiter) WaitForOutput(ctx context.Context, params *De
 func instanceTerminatedStateRetryable(ctx context.Context, input *DescribeInstancesInput, output *DescribeInstancesOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
+
 		expectedValue := "terminated"
-		match := len(v5) > 0
-		for _, v := range v5 {
-			if string(v) != expectedValue {
+		var match = true
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		if len(listOfValues) == 0 {
+			match = false
+		}
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) != expectedValue {
 				match = false
-				break
 			}
 		}
 
@@ -1509,64 +1484,50 @@ func instanceTerminatedStateRetryable(ctx context.Context, input *DescribeInstan
 	}
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
-		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
-		expectedValue := "pending"
-		var match bool
-		for _, v := range v5 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		expectedValue := "pending"
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 
 	if err == nil {
-		v1 := output.Reservations
-		var v2 [][]types.Instance
-		for _, v := range v1 {
-			v3 := v.Instances
-			v2 = append(v2, v3)
-		}
-		var v4 []types.Instance
-		for _, v := range v2 {
-			v4 = append(v4, v...)
-		}
-		var v5 []types.InstanceStateName
-		for _, v := range v4 {
-			v6 := v.State
-			v7 := v6.Name
-			v5 = append(v5, v7)
-		}
-		expectedValue := "stopping"
-		var match bool
-		for _, v := range v5 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		pathValue, err := jmespath.Search("Reservations[].Instances[].State.Name", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		expectedValue := "stopping"
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		for _, v := range listOfValues {
+			value, ok := v.(types.InstanceStateName)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.InstanceStateName value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 

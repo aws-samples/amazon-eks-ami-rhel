@@ -34,7 +34,7 @@ type DescribeRegistryInput struct {
 
 type DescribeRegistryOutput struct {
 
-	// The registry ID associated with the request.
+	// The ID of the registry.
 	RegistryId *string
 
 	// The replication configuration for the registry.

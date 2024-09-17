@@ -13,6 +13,7 @@ import (
 	smithytime "github.com/aws/smithy-go/time"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	smithywaiter "github.com/aws/smithy-go/waiter"
+	jmespath "github.com/jmespath/go-jmespath"
 	"time"
 )
 
@@ -377,18 +378,29 @@ func (w *VolumeAvailableWaiter) WaitForOutput(ctx context.Context, params *Descr
 func volumeAvailableStateRetryable(ctx context.Context, input *DescribeVolumesInput, output *DescribeVolumesOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.Volumes
-		var v2 []types.VolumeState
-		for _, v := range v1 {
-			v3 := v.State
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Volumes[].State", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
+
 		expectedValue := "available"
-		match := len(v2) > 0
-		for _, v := range v2 {
-			if string(v) != expectedValue {
+		var match = true
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		if len(listOfValues) == 0 {
+			match = false
+		}
+		for _, v := range listOfValues {
+			value, ok := v.(types.VolumeState)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.VolumeState value, got %T", pathValue)
+			}
+
+			if string(value) != expectedValue {
 				match = false
-				break
 			}
 		}
 
@@ -398,23 +410,26 @@ func volumeAvailableStateRetryable(ctx context.Context, input *DescribeVolumesIn
 	}
 
 	if err == nil {
-		v1 := output.Volumes
-		var v2 []types.VolumeState
-		for _, v := range v1 {
-			v3 := v.State
-			v2 = append(v2, v3)
-		}
-		expectedValue := "deleted"
-		var match bool
-		for _, v := range v2 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		pathValue, err := jmespath.Search("Volumes[].State", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		expectedValue := "deleted"
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		for _, v := range listOfValues {
+			value, ok := v.(types.VolumeState)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.VolumeState value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 
@@ -581,18 +596,29 @@ func (w *VolumeDeletedWaiter) WaitForOutput(ctx context.Context, params *Describ
 func volumeDeletedStateRetryable(ctx context.Context, input *DescribeVolumesInput, output *DescribeVolumesOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.Volumes
-		var v2 []types.VolumeState
-		for _, v := range v1 {
-			v3 := v.State
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Volumes[].State", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
+
 		expectedValue := "deleted"
-		match := len(v2) > 0
-		for _, v := range v2 {
-			if string(v) != expectedValue {
+		var match = true
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		if len(listOfValues) == 0 {
+			match = false
+		}
+		for _, v := range listOfValues {
+			value, ok := v.(types.VolumeState)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.VolumeState value, got %T", pathValue)
+			}
+
+			if string(value) != expectedValue {
 				match = false
-				break
 			}
 		}
 
@@ -775,18 +801,29 @@ func (w *VolumeInUseWaiter) WaitForOutput(ctx context.Context, params *DescribeV
 func volumeInUseStateRetryable(ctx context.Context, input *DescribeVolumesInput, output *DescribeVolumesOutput, err error) (bool, error) {
 
 	if err == nil {
-		v1 := output.Volumes
-		var v2 []types.VolumeState
-		for _, v := range v1 {
-			v3 := v.State
-			v2 = append(v2, v3)
+		pathValue, err := jmespath.Search("Volumes[].State", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
+
 		expectedValue := "in-use"
-		match := len(v2) > 0
-		for _, v := range v2 {
-			if string(v) != expectedValue {
+		var match = true
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		if len(listOfValues) == 0 {
+			match = false
+		}
+		for _, v := range listOfValues {
+			value, ok := v.(types.VolumeState)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.VolumeState value, got %T", pathValue)
+			}
+
+			if string(value) != expectedValue {
 				match = false
-				break
 			}
 		}
 
@@ -796,23 +833,26 @@ func volumeInUseStateRetryable(ctx context.Context, input *DescribeVolumesInput,
 	}
 
 	if err == nil {
-		v1 := output.Volumes
-		var v2 []types.VolumeState
-		for _, v := range v1 {
-			v3 := v.State
-			v2 = append(v2, v3)
-		}
-		expectedValue := "deleted"
-		var match bool
-		for _, v := range v2 {
-			if string(v) == expectedValue {
-				match = true
-				break
-			}
+		pathValue, err := jmespath.Search("Volumes[].State", output)
+		if err != nil {
+			return false, fmt.Errorf("error evaluating waiter state: %w", err)
 		}
 
-		if match {
-			return false, fmt.Errorf("waiter state transitioned to Failure")
+		expectedValue := "deleted"
+		listOfValues, ok := pathValue.([]interface{})
+		if !ok {
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
+		}
+
+		for _, v := range listOfValues {
+			value, ok := v.(types.VolumeState)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.VolumeState value, got %T", pathValue)
+			}
+
+			if string(value) == expectedValue {
+				return false, fmt.Errorf("waiter state transitioned to Failure")
+			}
 		}
 	}
 

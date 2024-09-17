@@ -25,9 +25,7 @@ var (
 )
 
 type containerdTemplateVars struct {
-	SandboxImage      string
-	RuntimeName       string
-	RuntimeBinaryName string
+	SandboxImage string
 }
 
 func writeContainerdConfig(cfg *api.NodeConfig) error {
@@ -39,7 +37,6 @@ func writeContainerdConfig(cfg *api.NodeConfig) error {
 	if err != nil {
 		return err
 	}
-
 	// because the logic in containerd's import merge decides to completely
 	// overwrite entire sections, we want to implement this merging ourselves.
 	// see: https://github.com/containerd/containerd/blob/a91b05d99ceac46329be06eb43f7ae10b89aad45/cmd/containerd/server/config/config.go#L407-L431
@@ -59,12 +56,8 @@ func writeContainerdConfig(cfg *api.NodeConfig) error {
 }
 
 func generateContainerdConfig(cfg *api.NodeConfig) ([]byte, error) {
-	instanceOptions := applyInstanceTypeMixins(cfg.Status.Instance.Type)
-
 	configVars := containerdTemplateVars{
-		SandboxImage:      cfg.Status.Defaults.SandboxImage,
-		RuntimeBinaryName: instanceOptions.RuntimeBinaryName,
-		RuntimeName:       instanceOptions.RuntimeName,
+		SandboxImage: cfg.Status.Defaults.SandboxImage,
 	}
 	var buf bytes.Buffer
 	if err := containerdConfigTemplate.Execute(&buf, configVars); err != nil {

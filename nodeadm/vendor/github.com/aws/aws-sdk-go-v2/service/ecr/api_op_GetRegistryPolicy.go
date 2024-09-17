@@ -35,7 +35,7 @@ type GetRegistryPolicyOutput struct {
 	// The JSON text of the permissions policy for a registry.
 	PolicyText *string
 
-	// The registry ID associated with the request.
+	// The ID of the registry.
 	RegistryId *string
 
 	// Metadata pertaining to the operation's result.

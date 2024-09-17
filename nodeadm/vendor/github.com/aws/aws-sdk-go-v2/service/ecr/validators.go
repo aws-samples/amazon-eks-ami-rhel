@@ -130,26 +130,6 @@ func (m *validateOpCreatePullThroughCacheRule) HandleInitialize(ctx context.Cont
 	return next.HandleInitialize(ctx, in)
 }
 
-type validateOpCreateRepositoryCreationTemplate struct {
-}
-
-func (*validateOpCreateRepositoryCreationTemplate) ID() string {
-	return "OperationInputValidation"
-}
-
-func (m *validateOpCreateRepositoryCreationTemplate) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
-	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
-) {
-	input, ok := in.Parameters.(*CreateRepositoryCreationTemplateInput)
-	if !ok {
-		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
-	}
-	if err := validateOpCreateRepositoryCreationTemplateInput(input); err != nil {
-		return out, metadata, err
-	}
-	return next.HandleInitialize(ctx, in)
-}
-
 type validateOpCreateRepository struct {
 }
 
@@ -205,26 +185,6 @@ func (m *validateOpDeletePullThroughCacheRule) HandleInitialize(ctx context.Cont
 		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
 	}
 	if err := validateOpDeletePullThroughCacheRuleInput(input); err != nil {
-		return out, metadata, err
-	}
-	return next.HandleInitialize(ctx, in)
-}
-
-type validateOpDeleteRepositoryCreationTemplate struct {
-}
-
-func (*validateOpDeleteRepositoryCreationTemplate) ID() string {
-	return "OperationInputValidation"
-}
-
-func (m *validateOpDeleteRepositoryCreationTemplate) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
-	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
-) {
-	input, ok := in.Parameters.(*DeleteRepositoryCreationTemplateInput)
-	if !ok {
-		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
-	}
-	if err := validateOpDeleteRepositoryCreationTemplateInput(input); err != nil {
 		return out, metadata, err
 	}
 	return next.HandleInitialize(ctx, in)
@@ -325,26 +285,6 @@ func (m *validateOpDescribeImages) HandleInitialize(ctx context.Context, in midd
 		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
 	}
 	if err := validateOpDescribeImagesInput(input); err != nil {
-		return out, metadata, err
-	}
-	return next.HandleInitialize(ctx, in)
-}
-
-type validateOpGetAccountSetting struct {
-}
-
-func (*validateOpGetAccountSetting) ID() string {
-	return "OperationInputValidation"
-}
-
-func (m *validateOpGetAccountSetting) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
-	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
-) {
-	input, ok := in.Parameters.(*GetAccountSettingInput)
-	if !ok {
-		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
-	}
-	if err := validateOpGetAccountSettingInput(input); err != nil {
 		return out, metadata, err
 	}
 	return next.HandleInitialize(ctx, in)
@@ -485,26 +425,6 @@ func (m *validateOpListTagsForResource) HandleInitialize(ctx context.Context, in
 		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
 	}
 	if err := validateOpListTagsForResourceInput(input); err != nil {
-		return out, metadata, err
-	}
-	return next.HandleInitialize(ctx, in)
-}
-
-type validateOpPutAccountSetting struct {
-}
-
-func (*validateOpPutAccountSetting) ID() string {
-	return "OperationInputValidation"
-}
-
-func (m *validateOpPutAccountSetting) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
-	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
-) {
-	input, ok := in.Parameters.(*PutAccountSettingInput)
-	if !ok {
-		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
-	}
-	if err := validateOpPutAccountSettingInput(input); err != nil {
 		return out, metadata, err
 	}
 	return next.HandleInitialize(ctx, in)
@@ -770,26 +690,6 @@ func (m *validateOpUpdatePullThroughCacheRule) HandleInitialize(ctx context.Cont
 	return next.HandleInitialize(ctx, in)
 }
 
-type validateOpUpdateRepositoryCreationTemplate struct {
-}
-
-func (*validateOpUpdateRepositoryCreationTemplate) ID() string {
-	return "OperationInputValidation"
-}
-
-func (m *validateOpUpdateRepositoryCreationTemplate) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
-	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
-) {
-	input, ok := in.Parameters.(*UpdateRepositoryCreationTemplateInput)
-	if !ok {
-		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
-	}
-	if err := validateOpUpdateRepositoryCreationTemplateInput(input); err != nil {
-		return out, metadata, err
-	}
-	return next.HandleInitialize(ctx, in)
-}
-
 type validateOpUploadLayerPart struct {
 }
 
@@ -854,10 +754,6 @@ func addOpCreatePullThroughCacheRuleValidationMiddleware(stack *middleware.Stack
 	return stack.Initialize.Add(&validateOpCreatePullThroughCacheRule{}, middleware.After)
 }
 
-func addOpCreateRepositoryCreationTemplateValidationMiddleware(stack *middleware.Stack) error {
-	return stack.Initialize.Add(&validateOpCreateRepositoryCreationTemplate{}, middleware.After)
-}
-
 func addOpCreateRepositoryValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpCreateRepository{}, middleware.After)
 }
@@ -868,10 +764,6 @@ func addOpDeleteLifecyclePolicyValidationMiddleware(stack *middleware.Stack) err
 
 func addOpDeletePullThroughCacheRuleValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpDeletePullThroughCacheRule{}, middleware.After)
-}
-
-func addOpDeleteRepositoryCreationTemplateValidationMiddleware(stack *middleware.Stack) error {
-	return stack.Initialize.Add(&validateOpDeleteRepositoryCreationTemplate{}, middleware.After)
 }
 
 func addOpDeleteRepositoryValidationMiddleware(stack *middleware.Stack) error {
@@ -892,10 +784,6 @@ func addOpDescribeImageScanFindingsValidationMiddleware(stack *middleware.Stack)
 
 func addOpDescribeImagesValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpDescribeImages{}, middleware.After)
-}
-
-func addOpGetAccountSettingValidationMiddleware(stack *middleware.Stack) error {
-	return stack.Initialize.Add(&validateOpGetAccountSetting{}, middleware.After)
 }
 
 func addOpGetDownloadUrlForLayerValidationMiddleware(stack *middleware.Stack) error {
@@ -924,10 +812,6 @@ func addOpListImagesValidationMiddleware(stack *middleware.Stack) error {
 
 func addOpListTagsForResourceValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpListTagsForResource{}, middleware.After)
-}
-
-func addOpPutAccountSettingValidationMiddleware(stack *middleware.Stack) error {
-	return stack.Initialize.Add(&validateOpPutAccountSetting{}, middleware.After)
 }
 
 func addOpPutImageValidationMiddleware(stack *middleware.Stack) error {
@@ -982,10 +866,6 @@ func addOpUpdatePullThroughCacheRuleValidationMiddleware(stack *middleware.Stack
 	return stack.Initialize.Add(&validateOpUpdatePullThroughCacheRule{}, middleware.After)
 }
 
-func addOpUpdateRepositoryCreationTemplateValidationMiddleware(stack *middleware.Stack) error {
-	return stack.Initialize.Add(&validateOpUpdateRepositoryCreationTemplate{}, middleware.After)
-}
-
 func addOpUploadLayerPartValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpUploadLayerPart{}, middleware.After)
 }
@@ -999,21 +879,6 @@ func validateEncryptionConfiguration(v *types.EncryptionConfiguration) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "EncryptionConfiguration"}
-	if len(v.EncryptionType) == 0 {
-		invalidParams.Add(smithy.NewErrParamRequired("EncryptionType"))
-	}
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	} else {
-		return nil
-	}
-}
-
-func validateEncryptionConfigurationForRepositoryCreationTemplate(v *types.EncryptionConfigurationForRepositoryCreationTemplate) error {
-	if v == nil {
-		return nil
-	}
-	invalidParams := smithy.InvalidParamsError{Context: "EncryptionConfigurationForRepositoryCreationTemplate"}
 	if len(v.EncryptionType) == 0 {
 		invalidParams.Add(smithy.NewErrParamRequired("EncryptionType"))
 	}
@@ -1371,34 +1236,6 @@ func validateOpCreatePullThroughCacheRuleInput(v *CreatePullThroughCacheRuleInpu
 	}
 }
 
-func validateOpCreateRepositoryCreationTemplateInput(v *CreateRepositoryCreationTemplateInput) error {
-	if v == nil {
-		return nil
-	}
-	invalidParams := smithy.InvalidParamsError{Context: "CreateRepositoryCreationTemplateInput"}
-	if v.Prefix == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("Prefix"))
-	}
-	if v.EncryptionConfiguration != nil {
-		if err := validateEncryptionConfigurationForRepositoryCreationTemplate(v.EncryptionConfiguration); err != nil {
-			invalidParams.AddNested("EncryptionConfiguration", err.(smithy.InvalidParamsError))
-		}
-	}
-	if v.ResourceTags != nil {
-		if err := validateTagList(v.ResourceTags); err != nil {
-			invalidParams.AddNested("ResourceTags", err.(smithy.InvalidParamsError))
-		}
-	}
-	if v.AppliedFor == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("AppliedFor"))
-	}
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	} else {
-		return nil
-	}
-}
-
 func validateOpCreateRepositoryInput(v *CreateRepositoryInput) error {
 	if v == nil {
 		return nil
@@ -1446,21 +1283,6 @@ func validateOpDeletePullThroughCacheRuleInput(v *DeletePullThroughCacheRuleInpu
 	invalidParams := smithy.InvalidParamsError{Context: "DeletePullThroughCacheRuleInput"}
 	if v.EcrRepositoryPrefix == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("EcrRepositoryPrefix"))
-	}
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	} else {
-		return nil
-	}
-}
-
-func validateOpDeleteRepositoryCreationTemplateInput(v *DeleteRepositoryCreationTemplateInput) error {
-	if v == nil {
-		return nil
-	}
-	invalidParams := smithy.InvalidParamsError{Context: "DeleteRepositoryCreationTemplateInput"}
-	if v.Prefix == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("Prefix"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -1542,21 +1364,6 @@ func validateOpDescribeImagesInput(v *DescribeImagesInput) error {
 	invalidParams := smithy.InvalidParamsError{Context: "DescribeImagesInput"}
 	if v.RepositoryName == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("RepositoryName"))
-	}
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	} else {
-		return nil
-	}
-}
-
-func validateOpGetAccountSettingInput(v *GetAccountSettingInput) error {
-	if v == nil {
-		return nil
-	}
-	invalidParams := smithy.InvalidParamsError{Context: "GetAccountSettingInput"}
-	if v.Name == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("Name"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -1665,24 +1472,6 @@ func validateOpListTagsForResourceInput(v *ListTagsForResourceInput) error {
 	invalidParams := smithy.InvalidParamsError{Context: "ListTagsForResourceInput"}
 	if v.ResourceArn == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("ResourceArn"))
-	}
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	} else {
-		return nil
-	}
-}
-
-func validateOpPutAccountSettingInput(v *PutAccountSettingInput) error {
-	if v == nil {
-		return nil
-	}
-	invalidParams := smithy.InvalidParamsError{Context: "PutAccountSettingInput"}
-	if v.Name == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("Name"))
-	}
-	if v.Value == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("Value"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -1915,31 +1704,6 @@ func validateOpUpdatePullThroughCacheRuleInput(v *UpdatePullThroughCacheRuleInpu
 	}
 	if v.CredentialArn == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("CredentialArn"))
-	}
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	} else {
-		return nil
-	}
-}
-
-func validateOpUpdateRepositoryCreationTemplateInput(v *UpdateRepositoryCreationTemplateInput) error {
-	if v == nil {
-		return nil
-	}
-	invalidParams := smithy.InvalidParamsError{Context: "UpdateRepositoryCreationTemplateInput"}
-	if v.Prefix == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("Prefix"))
-	}
-	if v.EncryptionConfiguration != nil {
-		if err := validateEncryptionConfigurationForRepositoryCreationTemplate(v.EncryptionConfiguration); err != nil {
-			invalidParams.AddNested("EncryptionConfiguration", err.(smithy.InvalidParamsError))
-		}
-	}
-	if v.ResourceTags != nil {
-		if err := validateTagList(v.ResourceTags); err != nil {
-			invalidParams.AddNested("ResourceTags", err.(smithy.InvalidParamsError))
-		}
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams

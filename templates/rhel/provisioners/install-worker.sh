@@ -29,6 +29,7 @@ validate_env_set CONTAINER_SELINUX_VERSION
 validate_env_set KUBERNETES_BUILD_DATE
 validate_env_set KUBERNETES_VERSION
 validate_env_set NERDCTL_URL
+validate_env_set NERDCTL_VERSION
 validate_env_set RUNC_VERSION
 validate_env_set WORKING_DIR
 
@@ -166,9 +167,11 @@ sudo systemctl enable --now containerd
 ### Nerdctl setup #############################################################
 ###############################################################################
 
-# NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | grep -oP '(?!.*full)"browser_download_url":\s*"\K[^"]+linux-'$ARCH'\.tar\.gz')
-NERDCTL_LATEST=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
-NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+NERDCTL_DOWNLOAD_URL=$NERDCTL_URL
+if [ "$NERDCTL_VERSION" == "*" ]; then
+  NERDCTL_LATEST=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
+  NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+fi
 sudo wget $NERDCTL_DOWNLOAD_URL
 sudo tar Cxzvvf /usr/bin nerdctl*.tar.gz
 
