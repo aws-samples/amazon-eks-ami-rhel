@@ -14,10 +14,6 @@ import (
 // Describes the most recent volume modification request for the specified EBS
 // volumes.
 //
-// If a volume has never been modified, some information in the output will be
-// null. If a volume has been modified more than once, the output includes only the
-// most recent modification request.
-//
 // For more information, see [Monitor the progress of volume modifications] in the Amazon EBS User Guide.
 //
 // [Monitor the progress of volume modifications]: https://docs.aws.amazon.com/ebs/latest/userguide/monitoring-volume-modifications.html
@@ -148,6 +144,9 @@ func (c *Client) addOperationDescribeVolumesModificationsMiddlewares(stack *midd
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -182,6 +181,18 @@ func (c *Client) addOperationDescribeVolumesModificationsMiddlewares(stack *midd
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

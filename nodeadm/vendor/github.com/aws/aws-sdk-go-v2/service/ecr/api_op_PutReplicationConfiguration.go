@@ -16,11 +16,13 @@ import (
 // action. The first time the PutReplicationConfiguration API is called, a
 // service-linked IAM role is created in your account for the replication process.
 // For more information, see [Using service-linked roles for Amazon ECR]in the Amazon Elastic Container Registry User Guide.
+// For more information on the custom role for replication, see [Creating an IAM role for replication].
 //
 // When configuring cross-account replication, the destination account must grant
 // the source account permission to replicate. This permission is controlled using
 // a registry permissions policy. For more information, see PutRegistryPolicy.
 //
+// [Creating an IAM role for replication]: https://docs.aws.amazon.com/AmazonECR/latest/userguide/replication-creation-templates.html#roles-creatingrole-user-console
 // [Using service-linked roles for Amazon ECR]: https://docs.aws.amazon.com/AmazonECR/latest/userguide/using-service-linked-roles.html
 func (c *Client) PutReplicationConfiguration(ctx context.Context, params *PutReplicationConfigurationInput, optFns ...func(*Options)) (*PutReplicationConfigurationOutput, error) {
 	if params == nil {
@@ -101,6 +103,9 @@ func (c *Client) addOperationPutReplicationConfigurationMiddlewares(stack *middl
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -138,6 +143,18 @@ func (c *Client) addOperationPutReplicationConfigurationMiddlewares(stack *middl
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

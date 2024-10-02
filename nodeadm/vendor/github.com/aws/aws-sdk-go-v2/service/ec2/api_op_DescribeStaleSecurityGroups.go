@@ -12,9 +12,9 @@ import (
 )
 
 // Describes the stale security group rules for security groups in a specified
-// VPC. Rules are stale when they reference a deleted security group in the same
-// VPC or peered VPC. Rules can also be stale if they reference a security group in
-// a peer VPC for which the VPC peering connection has been deleted.
+// VPC. Rules are stale when they reference a deleted security group in a peered
+// VPC. Rules can also be stale if they reference a security group in a peer VPC
+// for which the VPC peering connection has been deleted.
 func (c *Client) DescribeStaleSecurityGroups(ctx context.Context, params *DescribeStaleSecurityGroupsInput, optFns ...func(*Options)) (*DescribeStaleSecurityGroupsOutput, error) {
 	if params == nil {
 		params = &DescribeStaleSecurityGroupsInput{}
@@ -115,6 +115,9 @@ func (c *Client) addOperationDescribeStaleSecurityGroupsMiddlewares(stack *middl
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -152,6 +155,18 @@ func (c *Client) addOperationDescribeStaleSecurityGroupsMiddlewares(stack *middl
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

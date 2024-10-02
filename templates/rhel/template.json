@@ -18,10 +18,10 @@
     "containerd_url": null,
     "containerd_version": null,
     "creator": null,
+    "enable_efa": null,
     "enable_fips": null,
     "encrypted": null,
     "iam_instance_profile": null,
-    "enable_efa": null,
     "instance_type": null,
     "kms_key_id": null,
     "kubernetes_build_date": null,
@@ -29,6 +29,7 @@
     "launch_block_device_mappings_volume_size": null,
     "nerdctl_url": null,
     "nerdctl_version": null,
+    "nodeadm_build_image": null,
     "remote_folder": null,
     "runc_version": null,
     "security_group_id": null,
@@ -52,7 +53,6 @@
       "region": "{{user `aws_region`}}",
       "source_ami": "{{user `source_ami_id`}}",
       "ami_users": "{{user `ami_users`}}",
-      "iam_instance_profile": "{{user `iam_instance_profile`}}",
       "snapshot_users": "{{user `ami_users`}}",
       "source_ami_filter": {
         "filters": {
@@ -89,6 +89,7 @@
         "max_attempts": 480
       },
       "ami_regions": "{{user `ami_regions`}}",
+      "iam_instance_profile": "{{user `iam_instance_profile`}}",
       "ssh_username": "{{user `ssh_username`}}",
       "ssh_interface": "{{user `ssh_interface`}}",
       "temporary_security_group_source_cidrs": "{{user `temporary_security_group_source_cidrs`}}",
@@ -203,7 +204,7 @@
         "CONTAINERD_VERSION={{user `containerd_version`}}",
         "KUBERNETES_BUILD_DATE={{user `kubernetes_build_date`}}",
         "KUBERNETES_VERSION={{user `kubernetes_version`}}",
-	      "NERDCTL_URL={{user `nerdctl_url`}}",
+        "NERDCTL_URL={{user `nerdctl_url`}}",
         "NERDCTL_VERSION={{user `nerdctl_version`}}",
         "RUNC_VERSION={{user `runc_version`}}",
         "SSM_AGENT_VERSION={{user `ssm_agent_version`}}",
@@ -215,6 +216,7 @@
       "remote_folder": "{{ user `remote_folder`}}",
       "script": "{{template_dir}}/provisioners/install-nodeadm.sh",
       "environment_vars": [
+        "BUILD_IMAGE={{user `nodeadm_build_image`}}",
         "PROJECT_DIR={{user `working_dir`}}/nodeadm"
       ]
     },

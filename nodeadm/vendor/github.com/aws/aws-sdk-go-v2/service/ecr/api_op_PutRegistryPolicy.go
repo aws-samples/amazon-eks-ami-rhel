@@ -51,7 +51,7 @@ type PutRegistryPolicyOutput struct {
 	// The JSON policy text for your registry.
 	PolicyText *string
 
-	// The registry ID.
+	// The registry ID associated with the request.
 	RegistryId *string
 
 	// Metadata pertaining to the operation's result.
@@ -103,6 +103,9 @@ func (c *Client) addOperationPutRegistryPolicyMiddlewares(stack *middleware.Stac
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -140,6 +143,18 @@ func (c *Client) addOperationPutRegistryPolicyMiddlewares(stack *middleware.Stac
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

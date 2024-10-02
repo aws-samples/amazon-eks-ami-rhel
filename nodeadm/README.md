@@ -11,6 +11,9 @@ To initialize a node:
 nodeadm init
 ```
 
+> **Note**
+> This happens automatically, via a `systemd` service, on AL2023-based EKS AMI's.
+
 ---
 
 ## Configuration

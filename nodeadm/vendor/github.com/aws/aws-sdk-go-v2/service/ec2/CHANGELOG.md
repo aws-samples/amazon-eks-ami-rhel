@@ -1,3 +1,69 @@
+# v1.179.2 (2024-09-27)
+
+* No change notes available for this release.
+
+# v1.179.1 (2024-09-25)
+
+* **Documentation**: Updates to documentation for the transit gateway security group referencing feature.
+
+# v1.179.0 (2024-09-23)
+
+* **Feature**: Amazon EC2 G6e instances powered by NVIDIA L40S Tensor Core GPUs are the most cost-efficient GPU instances for deploying generative AI models and the highest performance GPU instances for spatial computing workloads.
+
+# v1.178.0 (2024-09-20)
+
+* **Feature**: Add tracing and metrics support to service clients.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.177.4 (2024-09-17)
+
+* **Bug Fix**: **BREAKFIX**: Only generate AccountIDEndpointMode config for services that use it. This is a compiler break, but removes no actual functionality, as no services currently use the account ID in endpoint resolution.
+
+# v1.177.3 (2024-09-10)
+
+* No change notes available for this release.
+
+# v1.177.2 (2024-09-04)
+
+* No change notes available for this release.
+
+# v1.177.1 (2024-09-03)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.177.0 (2024-08-28)
+
+* **Feature**: Amazon VPC IP Address Manager (IPAM) now allows customers to provision IPv4 CIDR blocks and allocate Elastic IP Addresses directly from IPAM pools with public IPv4 space
+
+# v1.176.0 (2024-08-21)
+
+* **Feature**: DescribeInstanceStatus now returns health information on EBS volumes attached to Nitro instances
+
+# v1.175.1 (2024-08-15)
+
+* **Dependency Update**: Bump minimum Go version to 1.21.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.175.0 (2024-08-12)
+
+* **Feature**: This release adds new capabilities to manage On-Demand Capacity Reservations including the ability to split your reservation, move capacity between reservations, and modify the instance eligibility of your reservation.
+
+# v1.174.0 (2024-08-08)
+
+* **Feature**: Launch of private IPv6 addressing for VPCs and Subnets. VPC IPAM supports the planning and monitoring of private IPv6 usage.
+
+# v1.173.0 (2024-07-25)
+
+* **Feature**: EC2 Fleet now supports using custom identifiers to reference Amazon Machine Images (AMI) in launch requests that are configured to choose from a diversified list of instance types.
+
+# v1.172.0 (2024-07-23)
+
+* **Feature**: Switch to new waiter matching implementation, which conveys a slight performance boost and removes the need for the go-jmespath runtime dependency.
+
+# v1.171.0 (2024-07-18)
+
+* **Feature**: Amazon VPC IP Address Manager (IPAM) now supports Bring-Your-Own-IP (BYOIP) for IP addresses registered with any Internet Registry. This feature uses DNS TXT records to validate ownership of a public IP address range.
+
 # v1.170.0 (2024-07-10.2)
 
 * **Feature**: Add parameters to enable provisioning IPAM BYOIPv4 space at a Local Zone Network Border Group level
