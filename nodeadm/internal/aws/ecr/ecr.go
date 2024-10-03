@@ -51,10 +51,9 @@ func GetEKSRegistry(region string) (ECRRegistry, error) {
 		fipsRegistry := getRegistry(account, "ecr-fips", region, servicesDomain)
 		resp, err := http.Get(fipsRegistry)
 		if err == nil && resp.StatusCode == 401 {
-			zap.L().Info("Successfully connected to the FIPS ECR registry", zap.String("fipsRegistry", fipsRegistry))
 			return ECRRegistry(fipsRegistry), nil
 		} else {
-			zap.L().Info("Fail to look up Fips registry for requested region, fall back to default", zap.String("fipsRegistry", fipsRegistry))
+			zap.L().Info("Fail to connect to the FIPS ECR registry for requested region, fall back to default", zap.String("fipsRegistry", fipsRegistry))
 		}
 	}
 	return ECRRegistry(getRegistry(account, "ecr", region, servicesDomain)), nil
