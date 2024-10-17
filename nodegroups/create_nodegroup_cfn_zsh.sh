@@ -1,14 +1,58 @@
 #!/bin/zsh
 
-EKS_CLUSTER=$1
-AMI_ID=$2
-MANAGED_NODE_GROUP=$3
-AWS_REGION=$4
-INSTANCE_TYPE=$5
-MIN_SIZE=$6
-DESIRED_SIZE=$7
-MAX_SIZE=$8
-SUBNETS=$(echo "$9" | tr '[:upper:]' '[:lower:]')
+# Short and long options
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -c|--cluster-name)
+      EKS_CLUSTER=$2
+      shift 2
+      ;;
+    -a|--ami-id)
+      AMI_ID=$2
+      shift 2
+      ;;
+    -m|--managed-node-group)
+      MANAGED_NODE_GROUP=$2
+      shift 2
+      ;;
+    -r|--region)
+      AWS_REGION=$2
+      shift 2
+      ;;
+    -i|--instance-type)
+      INSTANCE_TYPE=$2
+      shift 2
+      ;;
+    -n|--min-size)
+      MIN_SIZE=$2
+      shift 2
+      ;;
+    -d|--desired-size)
+      DESIRED_SIZE=$2
+      shift 2
+      ;;
+    -x|--max-size)
+      MAX_SIZE=$2
+      shift 2
+      ;;
+    -s|--subnets)
+      SUBNET_OPTION=$2
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# Check if required parameters are provided
+if [ -z "$EKS_CLUSTER" ] || [ -z "$AMI_ID" ] || [ -z "$MANAGED_NODE_GROUP" ] || [ -z "$AWS_REGION" ] || [ -z "$INSTANCE_TYPE" ] || [ -z "$MIN_SIZE" ] || [ -z "$DESIRED_SIZE" ] || [ -z "$MAX_SIZE" ] || [ -z "$SUBNET_OPTION" ]; then
+  echo "Usage: $0 --cluster-name <name> --ami-id <id> [--managed-node-group <name>] [--region <aws-region>] [--instance-type <type>] [--min-size <number>] [--desired-size <number>] [--max-size <number>] [--subnets <public|private|all>]"
+  exit 1
+fi
+
+SUBNETS=$(echo "$SUBNET_OPTION" | tr '[:upper:]' '[:lower:]')
 API_ENDPOINT=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.endpoint)
 CIDR=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.kubernetesNetworkConfig.serviceIpv4Cidr)
 CERTIFICATE=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.certificateAuthority.data)

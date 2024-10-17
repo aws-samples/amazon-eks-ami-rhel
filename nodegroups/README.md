@@ -13,26 +13,25 @@ The new method of joining EKS clusters using [nodeadm](nodeadm/README.md) is sig
 
 ## 👷 Usage
 
-Example command to launch a new worker node group with a custom configuration:
+Example commands to launch a new worker node group with a custom configuration:
 ```bash
-./create_nodegroup_cfn_zsh.sh rhel-eks ami-0b2e96e12344a54c0 rhel-eks-node-group us-gov-east-1 govcloud2024 t3.medium 3 3 3 https://5B3FFDCDC05F2D983E65079309123456.gr7.us-gov-east-1.eks.amazonaws.com 10.100.0.0/16 LS0tLS1CRUdLS0tLS0K "subnet-0f034415c5b771234 subnet-0bdba07340be11234 subnet-05c651fa62a571234" sg-038c07b2206e12345
+# Long syntax
+./create_nodegroup_cfn.sh --cluster-name rhel-eks-cluster --ami-id ami-0b2e96e12344a54c0 --managed-node-group rhel-eks-node-group --region us-gov-east-1 --instance-type t3.medium --min-size 3 --desired-size 3 --max-size 3 --subnets private
+
+# Short syntax
+./create_nodegroup_cfn.sh -c rhel-eks-cluster -a ami-0b2e96e12344a54c0 -m rhel-eks-node-group -r us-gov-east-1 -i t3.medium -n 3 -d 3 -x 3 -s private
 ```
 This would create a node group with the following configuration:
 ```yaml
-Cluster: rhel-eks
+Cluster: rhel-eks-cluster
 AMI ID: ami-0b2e96e12344a54c0
 Node group name: rhel-eks-node-group
 AWS Region: us-gov-east-1
-Keypair name: govcloud2024
 Instance type: t3.medium
-Min node group size: 3
+Minimum node group size: 3
 Desired node group size: 3
-Max node group size: 3
-EKS API endpoint: https://5B3FFDCDC05F2D983E65079309123456.gr7.us-gov-east-1.eks.amazonaws.com
-CIDR range: 10.100.0.0/16
-Certificate: LS0tLS1CRUdLS0tLS0K
-Subnet IDs: subnet-0f034415c5b771234 subnet-0bdba07340be11234 subnet-05c651fa62a571234
-Security group ID: sg-038c07b2206e12345
+Maximum node group size: 3
+Subnet type: private
 ```
 
 This command would generate a local CloudFormation template and execute the CloudFormation stack via the AWS CLI.
