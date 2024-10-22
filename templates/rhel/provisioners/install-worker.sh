@@ -23,9 +23,9 @@ validate_env_set() {
 validate_env_set AWS_REGION
 validate_env_set BINARY_BUCKET_NAME
 validate_env_set BINARY_BUCKET_REGION
+validate_env_set CONTAINER_SELINUX_VERSION
 validate_env_set CONTAINERD_URL
 validate_env_set CONTAINERD_VERSION
-validate_env_set CONTAINER_SELINUX_VERSION
 validate_env_set KUBERNETES_BUILD_DATE
 validate_env_set KUBERNETES_VERSION
 validate_env_set NERDCTL_URL
@@ -153,26 +153,40 @@ echo "AWS credentials available: ${AWS_CREDS_OK}"
 sudo dnf install -y runc-${RUNC_VERSION}
 sudo dnf install -y container-selinux-${CONTAINER_SELINUX_VERSION}
 
-CONTAINERD_DOWNLOAD_URL=$CONTAINERD_URL
-if [ "$CONTAINERD_VERSION" == "*" ]; then
-  CONTAINERD_LATEST=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
-  CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+# Download containerd tarball from S3 if an S3 URI is specified in the CONTAINERD_URL environment variable
+if [[ "$CONTAINERD_URL" == s3://* ]]; then
+  echo "Downloading containerd from: $CONTAINERD_URL"
+  aws s3 cp $CONTAINERD_URL .
+else
+  CONTAINERD_DOWNLOAD_URL=$CONTAINERD_URL
+  if [ "$CONTAINERD_VERSION" == "*" ]; then
+    CONTAINERD_LATEST=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
+    CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+  fi
+  sudo wget $CONTAINERD_DOWNLOAD_URL
 fi
-sudo wget $CONTAINERD_DOWNLOAD_URL
 sudo tar Cxzvvf /usr containerd*.tar.gz
 sudo systemctl daemon-reload
 sudo systemctl enable --now containerd
+
+sudo systemctl enable ebs-initialize-bin@containerd
 
 ###############################################################################
 ### Nerdctl setup #############################################################
 ###############################################################################
 
-NERDCTL_DOWNLOAD_URL=$NERDCTL_URL
-if [ "$NERDCTL_VERSION" == "*" ]; then
-  NERDCTL_LATEST=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
-  NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+# Download nerdctl tarball from S3 if an S3 URI is specified in the NERDCTL_URL environment variable
+if [[ "$NERDCTL_URL" == s3://* ]]; then
+  echo "Downloading nerdctl from: $NERDCTL_URL"
+  aws s3 cp $NERDCTL_URL .
+else
+  NERDCTL_DOWNLOAD_URL=$NERDCTL_URL
+  if [ "$NERDCTL_VERSION" == "*" ]; then
+    NERDCTL_LATEST=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
+    NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+  fi
+  sudo wget $NERDCTL_DOWNLOAD_URL
 fi
-sudo wget $NERDCTL_DOWNLOAD_URL
 sudo tar Cxzvvf /usr/bin nerdctl*.tar.gz
 
 # TODO: are these necessary? What do they do?
@@ -227,6 +241,11 @@ for binary in ${BINARIES[*]}; do
 done
 
 sudo rm ./*.sha256
+
+kubelet --version > "${WORKING_DIR}/kubelet-version.txt"
+sudo mv "${WORKING_DIR}/kubelet-version.txt" /etc/eks/kubelet-version.txt
+
+sudo systemctl enable ebs-initialize-bin@kubelet
 
 ################################################################################
 ### ECR Credential Provider Binary #############################################
@@ -287,7 +306,7 @@ sudo chown -R root:root /etc/eks
 sudo sed -i \
   's/ - package-update-upgrade-install/# Removed so that nodes do not have version skew based on when the node was started.\n# - package-update-upgrade-install/' \
   /etc/cloud/cloud.cfg
-  
+
 # the CNI results cache is not valid across reboots, and errant files can prevent cleanup of pod sandboxes
 # https://github.com/containerd/containerd/issues/8197
 # this was fixed in 1.2.x of libcni but containerd < 2.x are using libcni 1.1.x

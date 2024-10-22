@@ -18,18 +18,22 @@
 | `aws_session_token` |  |
 | `binary_bucket_name` |  |
 | `binary_bucket_region` |  |
+| `container_selinux_version` |  |
+| `containerd_url` | URL for downloading containerd binaries. Specify S3 URI (s3://my_bucket/containerd.tgz) to download from an S3 bucket using the AWS CLI. |
 | `containerd_version` |  |
 | `creator` |  |
+| `enable_efa` | Valid options are ```true``` or ```false```. Wheather or not to install the software needed to use AWS Elastic Fabric Adapter (EFA) network interfaces. |
 | `enable_fips` | Install openssl and enable fips related kernel parameters |
 | `encrypted` |  |
 | `iam_instance_profile` | The name of an IAM instance profile to launch the EC2 instance with. |
-| `enable_efa` | Valid options are ```true``` or ```false```. Wheather or not to install the software needed to use AWS Elastic Fabric Adapter (EFA) network interfaces. |
 | `instance_type` |  |
 | `kms_key_id` |  |
 | `kubernetes_build_date` |  |
 | `kubernetes_version` |  |
 | `launch_block_device_mappings_volume_size` |  |
-| `nerdctl_url` |  |
+| `nerdctl_url` | URL for downloading nerdctl binaries. Specify S3 URI (s3://my_bucket/nerdctl.tgz) to download from an S3 bucket using the AWS CLI. |
+| `nerdctl_version` |  |
+| `nodeadm_build_image` | Image to use as a build environment for nodeadm |
 | `remote_folder` | Directory path for shell provisioner scripts on the builder instance |
 | `runc_version` |  |
 | `security_group_id` |  |

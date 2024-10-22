@@ -6,6 +6,12 @@ set -o errexit
 
 sudo systemctl start containerd
 
+# authenticate with Amazon ECR if using a nodeadm build image hosted in a private ECR repository
+if [[ "$BUILD_IMAGE" == *"dkr"* ]]; then
+  ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+  aws ecr get-login-password --region $AWS_REGION | sudo nerdctl login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+fi
+
 sudo nerdctl run \
   --rm \
   --network host \
