@@ -158,11 +158,13 @@ if [[ "$CONTAINERD_URL" == s3://* ]]; then
   echo "Downloading containerd from: $CONTAINERD_URL"
   aws s3 cp $CONTAINERD_URL .
 else
-  CONTAINERD_DOWNLOAD_URL=$CONTAINERD_URL
   if [ "$CONTAINERD_VERSION" == "*" ]; then
-    CONTAINERD_LATEST=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
-    CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+    CONTAINERD_URL=$CONTAINERD_URL"/latest"
+  else
+    CONTAINERD_URL=$CONTAINERD_URL"/tags/v"$CONTAINERD_VERSION
   fi
+  CONTAINERD_VERSION=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
+  CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
   sudo wget $CONTAINERD_DOWNLOAD_URL
 fi
 sudo tar Cxzvvf /usr containerd*.tar.gz
@@ -180,11 +182,13 @@ if [[ "$NERDCTL_URL" == s3://* ]]; then
   echo "Downloading nerdctl from: $NERDCTL_URL"
   aws s3 cp $NERDCTL_URL .
 else
-  NERDCTL_DOWNLOAD_URL=$NERDCTL_URL
   if [ "$NERDCTL_VERSION" == "*" ]; then
-    NERDCTL_LATEST=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
-    NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_LATEST'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+    NERDCTL_URL=$NERDCTL_URL"/latest"
+  else
+    NERDCTL_URL=$NERDCTL_URL"/tags/v"$NERDCTL_VERSION
   fi
+  NERDCTL_VERSION=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
+  NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
   sudo wget $NERDCTL_DOWNLOAD_URL
 fi
 sudo tar Cxzvvf /usr/bin nerdctl*.tar.gz

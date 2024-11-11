@@ -6,10 +6,11 @@ set -o errexit
 
 sudo systemctl start containerd
 
-# authenticate with Amazon ECR if using a nodeadm build image hosted in a private ECR repository
-if [[ "$BUILD_IMAGE" == *"dkr"* ]]; then
-  ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
-  aws ecr get-login-password --region $AWS_REGION | sudo nerdctl login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+# if the image is from an ecr repository then try authenticate first
+if [[ "$BUILD_IMAGE" == *"dkr.ecr"* ]]; then
+  # nerdctl needs the https:// prefix when logging in to the repository
+  # see: https://github.com/containerd/nerdctl/issues/742
+  aws ecr get-login-password --region $AWS_REGION | sudo nerdctl login --username AWS --password-stdin "https://${BUILD_IMAGE%%/*}"
 fi
 
 sudo nerdctl run \
