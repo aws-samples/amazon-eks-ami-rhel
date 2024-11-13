@@ -183,6 +183,10 @@ sudo systemctl enable ebs-initialize-bin@containerd
 if [[ "$NERDCTL_URL" == *.rpm ]]; then
   echo "Installing nerdctl RPM from: $NERDCTL_URL"
   sudo dnf install -y $NERDCTL_URL
+  # This is used if you need to use AL2 yum packages.
+  # /usr/local/bin/nerdctl is not in the path for root.
+  sudo sh -c "echo 'export PATH=\$PATH:/usr/local/bin' > /etc/profile.d/usr_local_bin.sh"
+
 else
   # Download nerdctl tarball from S3 if an S3 URI is specified in the NERDCTL_URL environment variable
   if [[ "$NERDCTL_URL" == s3://* ]]; then
