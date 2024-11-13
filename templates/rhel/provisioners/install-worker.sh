@@ -268,6 +268,7 @@ tar xf aws-cfn-bootstrap-py3-latest.tar.gz
 cd aws-cfn-bootstrap-2.0
 sudo python3 setup.py build -q
 sudo python3 setup.py -q install --install-scripts /opt/aws/bin
+cd ..
 
 echo "Installed CLoudformation helper from ${CFN_BOOTSTRAP_URL}."
 
