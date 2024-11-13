@@ -69,13 +69,6 @@ sudo dnf install -y \
   mdadm \
   pigz
 
-# Install Cloudformation helper
-sudo mkdir -p /opt/aws/bin
-sudo wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz -q
-tar xf aws-cfn-bootstrap-py3-latest.tar.gz
-cd aws-cfn-bootstrap-2.0
-sudo python3 setup.py build -q
-sudo python3 setup.py -q install --install-scripts /opt/aws/bin
 
 ################################################################################
 ### Networking #################################################################
@@ -118,6 +111,9 @@ sudo systemctl restart sshd.service
 ### awscli #####################################################################
 ################################################################################
 
+# Set default AWSCLI_URL if not provided
+AWSCLI_URL=${AWSCLI_URL:-"https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip"}
+
 ### no option to install the awscli through dnf so have to install from awscli.amazonaws.com
 # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 if command -v aws &> /dev/null; then
@@ -131,7 +127,7 @@ else
     --show-error \
     --retry 10 \
     --retry-delay 1 \
-    -L "https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip" -o "${AWSCLI_DIR}/awscliv2.zip"
+    -L "$AWSCLI_URL" -o "${AWSCLI_DIR}/awscliv2.zip"
   unzip -q "${AWSCLI_DIR}/awscliv2.zip" -d ${AWSCLI_DIR}
   sudo "${AWSCLI_DIR}/aws/install" --bin-dir /bin/ --update
 fi
@@ -154,20 +150,27 @@ sudo dnf install -y runc-${RUNC_VERSION}
 sudo dnf install -y container-selinux-${CONTAINER_SELINUX_VERSION}
 
 # Download containerd tarball from S3 if an S3 URI is specified in the CONTAINERD_URL environment variable
-if [[ "$CONTAINERD_URL" == s3://* ]]; then
-  echo "Downloading containerd from: $CONTAINERD_URL"
-  aws s3 cp $CONTAINERD_URL .
+if [[ "$CONTAINERD_URL" == *.rpm ]]; then
+  echo "Installing containerd RPM from: $CONTAINERD_URL"
+  sudo dnf install -y $CONTAINERD_URL
 else
-  if [ "$CONTAINERD_VERSION" == "*" ]; then
-    CONTAINERD_URL=$CONTAINERD_URL"/latest"
+  # Download containerd tarball from S3 if an S3 URI is specified in the CONTAINERD_URL environment variable
+  if [[ "$CONTAINERD_URL" == s3://* ]]; then
+    echo "Downloading containerd from: $CONTAINERD_URL"
+    aws s3 cp $CONTAINERD_URL .
   else
-    CONTAINERD_URL=$CONTAINERD_URL"/tags/v"$CONTAINERD_VERSION
+    if [ "$CONTAINERD_VERSION" == "*" ]; then
+      CONTAINERD_URL=$CONTAINERD_URL"/latest"
+    else
+      CONTAINERD_URL=$CONTAINERD_URL"/tags/v"$CONTAINERD_VERSION
+    fi
+    CONTAINERD_VERSION=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
+    CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+    sudo wget $CONTAINERD_DOWNLOAD_URL
   fi
-  CONTAINERD_VERSION=$(curl -s $CONTAINERD_URL | jq -r '.tag_name[1:]')
-  CONTAINERD_DOWNLOAD_URL=$(curl -s "$CONTAINERD_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/containerd-'$CONTAINERD_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
-  sudo wget $CONTAINERD_DOWNLOAD_URL
+  sudo tar Cxzvvf /usr containerd*.tar.gz
 fi
-sudo tar Cxzvvf /usr containerd*.tar.gz
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now containerd
 
@@ -177,21 +180,26 @@ sudo systemctl enable ebs-initialize-bin@containerd
 ### Nerdctl setup #############################################################
 ###############################################################################
 
-# Download nerdctl tarball from S3 if an S3 URI is specified in the NERDCTL_URL environment variable
-if [[ "$NERDCTL_URL" == s3://* ]]; then
-  echo "Downloading nerdctl from: $NERDCTL_URL"
-  aws s3 cp $NERDCTL_URL .
+if [[ "$NERDCTL_URL" == *.rpm ]]; then
+  echo "Installing nerdctl RPM from: $NERDCTL_URL"
+  sudo dnf install -y $NERDCTL_URL
 else
-  if [ "$NERDCTL_VERSION" == "*" ]; then
-    NERDCTL_URL=$NERDCTL_URL"/latest"
+  # Download nerdctl tarball from S3 if an S3 URI is specified in the NERDCTL_URL environment variable
+  if [[ "$NERDCTL_URL" == s3://* ]]; then
+    echo "Downloading nerdctl from: $NERDCTL_URL"
+    aws s3 cp $NERDCTL_URL .
   else
-    NERDCTL_URL=$NERDCTL_URL"/tags/v"$NERDCTL_VERSION
+    if [ "$NERDCTL_VERSION" == "*" ]; then
+      NERDCTL_URL=$NERDCTL_URL"/latest"
+    else
+      NERDCTL_URL=$NERDCTL_URL"/tags/v"$NERDCTL_VERSION
+    fi
+    NERDCTL_VERSION=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
+    NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+    sudo wget $NERDCTL_DOWNLOAD_URL
   fi
-  NERDCTL_VERSION=$(curl -s $NERDCTL_URL | jq -r '.tag_name[1:]')
-  NERDCTL_DOWNLOAD_URL=$(curl -s "$NERDCTL_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/nerdctl-'$NERDCTL_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
-  sudo wget $NERDCTL_DOWNLOAD_URL
+  sudo tar Cxzvvf /usr/bin nerdctl*.tar.gz
 fi
-sudo tar Cxzvvf /usr/bin nerdctl*.tar.gz
 
 # TODO: are these necessary? What do they do?
 sudo dnf install -y device-mapper-persistent-data lvm2
@@ -250,6 +258,19 @@ kubelet --version > "${WORKING_DIR}/kubelet-version.txt"
 sudo mv "${WORKING_DIR}/kubelet-version.txt" /etc/eks/kubelet-version.txt
 
 sudo systemctl enable ebs-initialize-bin@kubelet
+
+# Install Cloudformation helper
+CFN_BOOTSTRAP_URL=https://s3.$S3_DOMAIN/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
+
+sudo mkdir -p /opt/aws/bin
+sudo wget $CFN_BOOTSTRAP_URL -q
+tar xf aws-cfn-bootstrap-py3-latest.tar.gz
+push aws-cfn-bootstrap-2.0
+sudo python3 setup.py build -q
+sudo python3 setup.py -q install --install-scripts /opt/aws/bin
+pop
+
+echo "Installed CLoudformation helper from ${CFN_BOOTSTRAP_URL}."
 
 ################################################################################
 ### ECR Credential Provider Binary #############################################
