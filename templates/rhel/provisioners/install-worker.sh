@@ -265,10 +265,9 @@ CFN_BOOTSTRAP_URL=https://s3.$S3_DOMAIN/cloudformation-examples/aws-cfn-bootstra
 sudo mkdir -p /opt/aws/bin
 sudo wget $CFN_BOOTSTRAP_URL -q
 tar xf aws-cfn-bootstrap-py3-latest.tar.gz
-push aws-cfn-bootstrap-2.0
+cd aws-cfn-bootstrap-2.0
 sudo python3 setup.py build -q
 sudo python3 setup.py -q install --install-scripts /opt/aws/bin
-pop
 
 echo "Installed CLoudformation helper from ${CFN_BOOTSTRAP_URL}."
 
