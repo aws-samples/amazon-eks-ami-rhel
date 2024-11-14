@@ -185,8 +185,14 @@ if [[ "$NERDCTL_URL" == *.rpm ]]; then
   sudo dnf install -y $NERDCTL_URL
   # This is used if you need to use AL2 yum packages.
   # /usr/local/bin/nerdctl is not in the path for root.
-  sudo sh -c "echo 'export PATH=\$PATH:/usr/local/bin' > /etc/profile.d/usr_local_bin.sh"
-  echo "Added /usr/local/bin to all users path"
+  if [ -f "/usr/local/bin/nerdctl" ]; then
+      if [ ! -e "/usr/bin/nerdctl" ]; then
+          sudo ln -s /usr/local/bin/nerdctl /usr/bin/nerdctl
+          echo "Symlink created: /usr/bin/nerdctl -> /usr/local/bin/nerdctl"
+      else
+          echo "A file or symlink already exists at /usr/bin/nerdctl. No action taken."
+      fi
+  fi
 
 else
   # Download nerdctl tarball from S3 if an S3 URI is specified in the NERDCTL_URL environment variable
