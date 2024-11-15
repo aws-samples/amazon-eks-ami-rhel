@@ -149,7 +149,7 @@ echo "AWS credentials available: ${AWS_CREDS_OK}"
 sudo dnf install -y runc-${RUNC_VERSION}
 sudo dnf install -y container-selinux-${CONTAINER_SELINUX_VERSION}
 
-# Download containerd tarball from S3 if an S3 URI is specified in the CONTAINERD_URL environment variable
+# Use an RPM URL to install containerd
 if [[ "$CONTAINERD_URL" == *.rpm ]]; then
   echo "Installing containerd RPM from: $CONTAINERD_URL"
   sudo dnf install -y $CONTAINERD_URL
@@ -180,6 +180,7 @@ sudo systemctl enable ebs-initialize-bin@containerd
 ### Nerdctl setup #############################################################
 ###############################################################################
 
+# Use an RPM URL to install nerdctl
 if [[ "$NERDCTL_URL" == *.rpm ]]; then
   echo "Installing nerdctl RPM from: $NERDCTL_URL"
   sudo dnf install -y $NERDCTL_URL
