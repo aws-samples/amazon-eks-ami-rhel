@@ -152,7 +152,8 @@ sudo dnf install -y container-selinux-${CONTAINER_SELINUX_VERSION}
 # Use an RPM URL to install containerd
 if [[ "$CONTAINERD_URL" == *.rpm ]]; then
   echo "Installing containerd RPM from: $CONTAINERD_URL"
-  sudo dnf install -y $CONTAINERD_URL
+  # TODO: Add GPG keys for these repos.
+  sudo dnf install -y $CONTAINERD_URL --nogpgcheck
 else
   # Download containerd tarball from S3 if an S3 URI is specified in the CONTAINERD_URL environment variable
   if [[ "$CONTAINERD_URL" == s3://* ]]; then
@@ -183,7 +184,8 @@ sudo systemctl enable ebs-initialize-bin@containerd
 # Use an RPM URL to install nerdctl
 if [[ "$NERDCTL_URL" == *.rpm ]]; then
   echo "Installing nerdctl RPM from: $NERDCTL_URL"
-  sudo dnf install -y $NERDCTL_URL
+  # TODO: Add GPG keys for these repos.
+  sudo dnf install -y $NERDCTL_URL --nogpgcheck 
   # This is used if you need to use AL2 yum packages.
   # /usr/local/bin/nerdctl is not in the path for root.
   if [ -f "/usr/local/bin/nerdctl" ]; then
