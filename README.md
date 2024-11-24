@@ -10,7 +10,16 @@ a forked version of the configuration that Amazon EKS uses to create the officia
 
 ## 🔔 Announcements
 
-### This code base now follows the Amazon Linux 2023 custom EKS AMI code base
+### November 23, 2024 - Pause container image caching requires IAM credentials
+
+Pause container image caching was [readded to the upstream build process](https://github.com/awslabs/amazon-eks-ami/pull/2000). This requires a few configurations for the build to complete successfully:
+* Proper configuration of the new ```pause_container_image``` parameter. You can find the AWS managed regional repository using the [documented list](https://docs.aws.amazon.com/eks/latest/userguide/add-ons-images.html).
+* IAM credentials with permissions to read from AWS managed ECR repositories.
+  * These credentials can either be passed in via API keys or (recommended) you can attach an IAM Instance Profile during the build process by passing in the ```iam_instance_profile``` parameter.
+  
+Example commands with the ```pause_container_image``` and ```iam_instance_profile``` parameters configured can be found below.
+ 
+### March 6, 2024 - This code base now follows the Amazon Linux 2023 custom EKS AMI code base
 
 This code base has always followed the [awslabs amazon-eks-ami](https://github.com/awslabs/amazon-eks-ami) code base as closely as possible.
 * Significant changes were made to that upstream code base to provide EKS support for Amazon Linux 2023.
@@ -104,17 +113,17 @@ invoking Packer directly. You can initiate the build process by running the
 following command in the root of this repository:
 
 ```bash
-# Example for building an AMI with the latest Kubernetes version and the latest RHEL 8.9 AMI
+# Example for building an AMI with the latest Kubernetes version and the latest RHEL 8.9 AMI. This would use all variables stored in the variables-default.json file.
 make
 
-# Example for building an AMI with the latest Kubernetes version and the latest RHEL 8.9 AMI in us-gov-east-1 region
-make k8s=1.29 ami_regions=us-gov-east-1 aws_region=us-gov-east-1
+# Example for building an AMI with the latest Kubernetes version and the latest RHEL 8.9 AMI in us-gov-east-1
+make k8s=1.30 ami_regions=us-gov-east-1 aws_region=us-gov-east-1 iam_instance_profile=EC2Role pause_container_image=151742754352.dkr.ecr.us-gov-east-1.amazonaws.com/eks/pause:3.5
 
 # Example for building an AMI off of the latest RHEL 9.0.0 AMI in us-east-2 region
-make k8s=1.29 source_ami_filter_name=RHEL-9.0.0_HVM-2023*-x86_64-* ami_regions=us-east-2 aws_region=us-east-2
+make k8s=1.30 source_ami_filter_name=RHEL-9.0.0_HVM-2023*-x86_64-* ami_regions=us-east-2 aws_region=us-east-2 iam_instance_profile=EC2Role pause_container_image=602401143452.dkr.ecr.us-east-2.amazonaws.com/eks/pause:3.5
 
 # Example for building a customized DISA STIG compliant AMI, owned by a specific AWS Account in AWS GovCloud us-gov-east-1 region, with binaries stored in a private S3 bucket, an IAM instance profile attached, a user data script to install the AWS Systems Manager agent, and using AWS Systems Manager Session Manager for Packer terminal access.
-make k8s=1.29 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_regions=us-gov-east-1 aws_region=us-gov-east-1 binary_bucket_name=my-eks-bucket binary_bucket_region=us-gov-east-1 iam_instance_profile=EC2Role pull_cni_from_github=false ssh_interface=session_manager user_data_file=/path/to/ssm_install.txt
+make k8s=1.30 source_ami_owners=123456789123 source_ami_filter_name=RHEL9_STIG_BASE*2023-04-14* ami_regions=us-gov-east-1 aws_region=us-gov-east-1 binary_bucket_name=my-eks-bucket binary_bucket_region=us-gov-east-1 iam_instance_profile=EC2Role pause_container_image=151742754352.dkr.ecr.us-gov-east-1.amazonaws.com/eks/pause:3.5 pull_cni_from_github=false ssh_interface=session_manager user_data_file=/path/to/ssm_install.txt
 
 # Check default value and options in help doc
 make help

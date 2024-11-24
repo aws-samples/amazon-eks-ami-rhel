@@ -23,6 +23,7 @@
     "nerdctl_url": "https://api.github.com/repos/containerd/nerdctl/releases",
     "nerdctl_version": "*",
     "nodeadm_build_image": "public.ecr.aws/eks-distro-build-tooling/golang:1.23",
+    "pause_container_image": "602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/pause:3.5",
     "remote_folder": "/tmp",
     "runc_version": "*",
     "security_group_id": "",
