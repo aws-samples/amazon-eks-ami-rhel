@@ -2257,8 +2257,6 @@ type FleetCapacityReservationUsageStrategy string
 // Enum values for FleetCapacityReservationUsageStrategy
 const (
 	FleetCapacityReservationUsageStrategyUseCapacityReservationsFirst FleetCapacityReservationUsageStrategy = "use-capacity-reservations-first"
-	FleetCapacityReservationUsageStrategyUseCapacityReservationsOnly  FleetCapacityReservationUsageStrategy = "use-capacity-reservations-only"
-	FleetCapacityReservationUsageStrategyNone                         FleetCapacityReservationUsageStrategy = "none"
 )
 
 // Values returns all known values for FleetCapacityReservationUsageStrategy. Note
@@ -2269,8 +2267,6 @@ const (
 func (FleetCapacityReservationUsageStrategy) Values() []FleetCapacityReservationUsageStrategy {
 	return []FleetCapacityReservationUsageStrategy{
 		"use-capacity-reservations-first",
-		"use-capacity-reservations-only",
-		"none",
 	}
 }
 
@@ -7516,6 +7512,34 @@ func (SecurityGroupReferencingSupportValue) Values() []SecurityGroupReferencingS
 	return []SecurityGroupReferencingSupportValue{
 		"enable",
 		"disable",
+	}
+}
+
+type SecurityGroupVpcAssociationState string
+
+// Enum values for SecurityGroupVpcAssociationState
+const (
+	SecurityGroupVpcAssociationStateAssociating          SecurityGroupVpcAssociationState = "associating"
+	SecurityGroupVpcAssociationStateAssociated           SecurityGroupVpcAssociationState = "associated"
+	SecurityGroupVpcAssociationStateAssociationFailed    SecurityGroupVpcAssociationState = "association-failed"
+	SecurityGroupVpcAssociationStateDisassociating       SecurityGroupVpcAssociationState = "disassociating"
+	SecurityGroupVpcAssociationStateDisassociated        SecurityGroupVpcAssociationState = "disassociated"
+	SecurityGroupVpcAssociationStateDisassociationFailed SecurityGroupVpcAssociationState = "disassociation-failed"
+)
+
+// Values returns all known values for SecurityGroupVpcAssociationState. Note that
+// this can be expanded in the future, and so it is only as up to date as the
+// client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (SecurityGroupVpcAssociationState) Values() []SecurityGroupVpcAssociationState {
+	return []SecurityGroupVpcAssociationState{
+		"associating",
+		"associated",
+		"association-failed",
+		"disassociating",
+		"disassociated",
+		"disassociation-failed",
 	}
 }
 
