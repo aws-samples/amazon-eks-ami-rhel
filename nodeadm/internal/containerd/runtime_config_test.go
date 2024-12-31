@@ -9,7 +9,7 @@ func TestApplyInstanceTypeMixins(t *testing.T) {
 
 	var nvidiaExpectedOutput = instanceOptions{RuntimeName: "nvidia", RuntimeBinaryName: "/usr/bin/nvidia-container-runtime"}
 	var neuronExpectedOutput = instanceOptions{RuntimeName: "runc", RuntimeBinaryName: "/usr/bin/runc"}
-	var nonAcceleratedExpectedOutput = instanceOptions{RuntimeName: "runc", RuntimeBinaryName: "/usr/bin/runc"}
+	var nonAcceleratedExpectedOutput = instanceOptions{RuntimeName: "runc", RuntimeBinaryName: "/usr/sbin/runc"}
 
 	var tests = []struct {
 		name           string
