@@ -111,10 +111,10 @@ sudo systemctl restart sshd.service
 ### awscli #####################################################################
 ################################################################################
 
-# Set default AWSCLI_URL if not provided
-AWSCLI_URL=${AWSCLI_URL:-"https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip"}
+# Set default AWS_CLI_URL if not provided
+AWS_CLI_URL=${AWS_CLI_URL:-"https://awscli.amazonaws.com/awscli-exe-linux-${MACHINE}.zip"}
 
-### no option to install the awscli through dnf so have to install from awscli.amazonaws.com
+### no option to install the awscli through dnf so have to install from a provided url
 # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 if command -v aws &> /dev/null; then
   echo "awscli is already installed. Skipping installation."
@@ -127,7 +127,7 @@ else
     --show-error \
     --retry 10 \
     --retry-delay 1 \
-    -L "$AWSCLI_URL" -o "${AWSCLI_DIR}/awscliv2.zip"
+    -L "$AWS_CLI_URL" -o "${AWSCLI_DIR}/awscliv2.zip"
   unzip -q "${AWSCLI_DIR}/awscliv2.zip" -d ${AWSCLI_DIR}
   sudo "${AWSCLI_DIR}/aws/install" --bin-dir /bin/ --update
 fi
@@ -189,14 +189,13 @@ if [[ "$NERDCTL_URL" == *.rpm ]]; then
   # This is used if you need to use AL2 yum packages.
   # /usr/local/bin/nerdctl is not in the path for root.
   if [ -f "/usr/local/bin/nerdctl" ]; then
-      if [ ! -e "/usr/bin/nerdctl" ]; then
-          sudo ln -s /usr/local/bin/nerdctl /usr/bin/nerdctl
-          echo "Symlink created: /usr/bin/nerdctl -> /usr/local/bin/nerdctl"
-      else
-          echo "A file or symlink already exists at /usr/bin/nerdctl. No action taken."
-      fi
+    if [ ! -e "/usr/bin/nerdctl" ]; then
+      sudo ln -s /usr/local/bin/nerdctl /usr/bin/nerdctl
+      echo "Symlink created: /usr/bin/nerdctl -> /usr/local/bin/nerdctl"
+    else
+      echo "A file or symlink already exists at /usr/bin/nerdctl. No action taken."
+    fi
   fi
-
 else
   # Download nerdctl tarball from S3 if an S3 URI is specified in the NERDCTL_URL environment variable
   if [[ "$NERDCTL_URL" == s3://* ]]; then
@@ -273,19 +272,6 @@ kubelet --version > "${WORKING_DIR}/kubelet-version.txt"
 sudo mv "${WORKING_DIR}/kubelet-version.txt" /etc/eks/kubelet-version.txt
 
 sudo systemctl enable ebs-initialize-bin@kubelet
-
-# Install Cloudformation helper
-CFN_BOOTSTRAP_URL=https://s3.$S3_DOMAIN/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
-
-sudo mkdir -p /opt/aws/bin
-sudo wget $CFN_BOOTSTRAP_URL -q
-tar xf aws-cfn-bootstrap-py3-latest.tar.gz
-cd aws-cfn-bootstrap-2.0
-sudo python3 setup.py build -q
-sudo python3 setup.py -q install --install-scripts /opt/aws/bin
-cd ..
-
-echo "Installed CLoudformation helper from ${CFN_BOOTSTRAP_URL}."
 
 ################################################################################
 ### ECR Credential Provider Binary #############################################

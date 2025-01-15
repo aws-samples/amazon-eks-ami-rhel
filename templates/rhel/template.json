@@ -9,6 +9,7 @@
     "arch": null,
     "associate_public_ip_address": null,
     "aws_access_key_id": null,
+    "aws_cli_url": null,
     "aws_region": null,
     "aws_secret_access_key": null,
     "aws_session_token": null,
@@ -195,6 +196,7 @@
       "script": "{{template_dir}}/provisioners/install-worker.sh",
       "environment_vars": [
         "AWS_ACCESS_KEY_ID={{user `aws_access_key_id`}}",
+	"AWS_CLI_URL={{user `aws_cli_url`}}",
         "AWS_REGION={{user `aws_region`}}",
         "AWS_SECRET_ACCESS_KEY={{user `aws_secret_access_key`}}",
         "AWS_SESSION_TOKEN={{user `aws_session_token`}}",
