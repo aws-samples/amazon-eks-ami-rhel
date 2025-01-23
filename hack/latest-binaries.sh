@@ -15,6 +15,9 @@ MINOR_VERSION="${1}"
 BINARY_BUCKET_REGION="${2:-us-west-2}"  # Default to us-west-2 if not provided
 BINARY_BUCKET_NAME="${3:-amazon-eks}"    # Default to amazon-eks if not provided
 
+export CURL_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+export REQUESTS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+
 # Set S3 domain based on region
 S3_DOMAIN="amazonaws.com"
 if [ "$BINARY_BUCKET_REGION" = "cn-north-1" ] || [ "$BINARY_BUCKET_REGION" = "cn-northwest-1" ]; then
