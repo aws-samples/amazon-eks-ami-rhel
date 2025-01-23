@@ -6,9 +6,6 @@ set -o errexit
 IFS=$'\n\t'
 export AWS_DEFAULT_OUTPUT="json"
 
-export CURL_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
-export REQUESTS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
-
 ################################################################################
 ### Validate Required Arguments ################################################
 ################################################################################
@@ -71,6 +68,9 @@ sudo dnf install -y \
   wget \
   mdadm \
   pigz
+
+export AWS_DEFAULT_REGION=$AWS_REGION
+export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
 
 
 ################################################################################
