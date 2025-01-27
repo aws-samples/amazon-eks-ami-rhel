@@ -69,6 +69,9 @@ sudo dnf install -y \
   mdadm \
   pigz
 
+export AWS_DEFAULT_REGION=$AWS_REGION
+export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+
 
 ################################################################################
 ### Networking #################################################################
