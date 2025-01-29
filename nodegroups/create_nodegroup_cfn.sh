@@ -52,47 +52,42 @@ if [ -z "$EKS_CLUSTER" ] || [ -z "$AMI_ID" ] || [ -z "$MANAGED_NODE_GROUP" ] || 
   exit 1
 fi
 
-SUBNETS=$(echo "$SUBNET_OPTION" | tr '[:upper:]' '[:lower:]')
 API_ENDPOINT=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.endpoint)
 CIDR=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.kubernetesNetworkConfig.serviceIpv4Cidr)
 CERTIFICATE=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.certificateAuthority.data)
 SECURITY_GROUP_ID=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.resourcesVpcConfig.clusterSecurityGroupId)
 DATE_TIME=$(date +'%Y%m%d%H%M')
 
-# List of subnet IDs
-subnets=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.resourcesVpcConfig.subnetIds)
-
-public_subnets=""
-private_subnets=""
-
-# Loop through subnets and determine if they are public or private
-for subnet in $subnets; do
-  cleaned_subnet=$(echo $subnet | tr -d '[]",')
-
-  if [ -n "$cleaned_subnet" ]; then
-    is_public=$(aws ec2 describe-subnets --subnet-ids $cleaned_subnet --query "Subnets[0].MapPublicIpOnLaunch" --output text)
+# Cleanup and create subnet list
+SUBNET_OPTION=$(echo "$SUBNET_OPTION" | tr '[:upper:]' '[:lower:]')
+case "${SUBNET_OPTION}" in
+  public|private|all)
+    subnets=$(aws eks describe-cluster --name $EKS_CLUSTER --query cluster.resourcesVpcConfig.subnetIds)
+    for subnet in $subnets; do
+      cleaned_subnet=$(echo $subnet | tr -d '[]",')
+      if [ -n "$cleaned_subnet" ]; then
+        is_public=$(aws ec2 describe-subnets --subnet-ids $cleaned_subnet --query "Subnets[0].MapPublicIpOnLaunch" --output text)
+        if [ "$is_public" = "True" ]; then
+          public_subnets+="${cleaned_subnet} "
+        else
+          private_subnets+="${cleaned_subnet} "
+        fi
+      fi
+    done
+    public_subnets=${public_subnets%% }
+    private_subnets=${private_subnets%% }
     
-    if [ "$is_public" = "True" ]; then
-      public_subnets+="${cleaned_subnet} "
-    else
-      private_subnets+="${cleaned_subnet} "
-    fi
-  fi
-done
-
-public_subnets=$(echo "$public_subnets" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-private_subnets=$(echo "$private_subnets" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
-# Build subnet list for CloudFormation template based on user's specified type of subnet or explicit string of subnets
-if [ "$SUBNETS" = "public" ]; then
-  SUBNETS=$(echo "$public_subnets" | tr ' ' '\n' | while read public_subnet; do echo "        - ${public_subnet}"; done)
-elif [ "$SUBNETS" = "private" ]; then
-  SUBNETS=$(echo "$private_subnets" | tr ' ' '\n' | while read private_subnet; do echo "        - ${private_subnet}"; done)
-elif [ "$SUBNETS" = "all" ]; then
-  SUBNETS=$(echo -e "${public_subnets}\n${private_subnets}" | tr ' ' '\n' | while read subnet; do echo "        - ${subnet}"; done)
-else
-  SUBNETS=$(echo "$9" | tr ' ' '\n' | while read subnet; do echo "        - ${subnet}"; done)
-fi
+    case "${SUBNET_OPTION}" in
+      public)  subnet_list="$public_subnets" ;;
+      private) subnet_list="$private_subnets" ;;
+      all)     subnet_list="$public_subnets $private_subnets" ;;
+    esac
+    SUBNETS=$(echo "$subnet_list" | tr ' ' '\n' | sed '/^$/d' | sed 's/^/        - /')
+    ;;
+  *)
+    SUBNETS=$(echo "${SUBNET_OPTION//,/ }" | tr -s ' ' '\n' | sed '/^$/d' | sed 's/^/        - /')
+    ;;
+esac
 
 # Create CloudFormation template
 cat > cf-template-$DATE_TIME.yaml << EOF
