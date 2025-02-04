@@ -6,6 +6,11 @@ set -o errexit
 
 sudo systemctl start containerd
 
+export CURL_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+export REQUESTS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+export AWS_DEFAULT_REGION="$AWS_REGION"
+export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+
 # if the image is from an ecr repository then try authenticate first
 if [[ "$BUILD_IMAGE" == *"dkr.ecr"* ]]; then
   # nerdctl needs the https:// prefix when logging in to the repository
