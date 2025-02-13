@@ -93,13 +93,6 @@ EOF
 sudo sed -i "s/^MACAddressPolicy=.*/MACAddressPolicy=none/" /usr/lib/systemd/network/99-default.link || true
 
 ################################################################################
-### Time #######################################################################
-################################################################################
-
-sudo cp -v $WORKING_DIR/shared/configure-clocksource.service /etc/systemd/system/configure-clocksource.service
-sudo systemctl enable configure-clocksource
-
-################################################################################
 ### SSH ########################################################################
 ################################################################################
 
@@ -136,10 +129,8 @@ fi
 ### AWS credentials ############################################################
 ################################################################################
 
-AWS_CREDS_OK=false
-if aws sts get-caller-identity > /dev/null 2>&1; then
-  AWS_CREDS_OK=true
-fi
+# check for AWS credentials and store result in AWS_CREDS_OK
+AWS_CREDS_OK=$(aws sts get-caller-identity >/dev/null 2>&1 && echo true || echo false)
 echo "AWS credentials available: ${AWS_CREDS_OK}"
 
 ###############################################################################
@@ -242,19 +233,20 @@ fi
 S3_URL_BASE="https://$BINARY_BUCKET_NAME.s3.$BINARY_BUCKET_REGION.$S3_DOMAIN/$KUBERNETES_VERSION/$KUBERNETES_BUILD_DATE/bin/linux/$ARCH"
 S3_PATH="s3://$BINARY_BUCKET_NAME/$KUBERNETES_VERSION/$KUBERNETES_BUILD_DATE/bin/linux/$ARCH"
 
+# pass in the --no-sign-request flag if crossing partitions from a us-gov region to a non us-gov region
+NO_SIGN_REQUEST=""
+if [[ "$AWS_REGION" == *"us-gov"* ]] && [[ "$BINARY_BUCKET_REGION" != *"us-gov"* ]]; then
+  NO_SIGN_REQUEST="--no-sign-request"
+fi
+
 BINARIES=(
   kubelet
 )
 for binary in ${BINARIES[*]}; do
-  if [ "${AWS_CREDS_OK}" = "true" ]; then
+  if [ "$AWS_CREDS_OK" = "true" ]; then
     echo "AWS credentials present - using them to copy binaries from s3."
-    if [[ "$BINARY_BUCKET_NAME" == "amazon-eks" ]] && [[ "$AWS_REGION" =~ (us-gov-east-1|us-gov-west-1) ]]; then
-      aws s3 cp --region us-west-2 --no-sign-request $S3_PATH/$binary .
-      aws s3 cp --region us-west-2 --no-sign-request $S3_PATH/$binary.sha256 .
-    else
-      aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary .
-      aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary.sha256 .
-    fi
+    aws s3 cp --region $BINARY_BUCKET_REGION $NO_SIGN_REQUEST $S3_PATH/$binary .
+    aws s3 cp --region $BINARY_BUCKET_REGION $NO_SIGN_REQUEST $S3_PATH/$binary.sha256 .
   else
     echo "AWS credentials missing - using wget to fetch binaries from s3. Note: This won't work for private bucket."
     sudo wget $S3_URL_BASE/$binary
@@ -279,13 +271,9 @@ sudo systemctl enable ebs-initialize-bin@kubelet
 
 ECR_CREDENTIAL_PROVIDER_BINARY="ecr-credential-provider"
 
-if [ "${AWS_CREDS_OK}" = "true" ]; then
+if [ "$AWS_CREDS_OK" = "true" ]; then
   echo "AWS credentials present - using them to copy ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3."
-  if [[ "$BINARY_BUCKET_NAME" == "amazon-eks" ]] && [[ "$AWS_REGION" =~ (us-gov-east-1|us-gov-west-1) ]]; then
-    aws s3 cp --region us-west-2 --no-sign-request $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
-  else
-    aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .      
-  fi
+  aws s3 cp --region $BINARY_BUCKET_REGION $NO_SIGN_REQUEST $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
 else
   echo "AWS credentials missing - using wget to fetch ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3. Note: This won't work for private bucket."
   sudo wget "$S3_URL_BASE/$ECR_CREDENTIAL_PROVIDER_BINARY"
@@ -304,11 +292,11 @@ if dnf list installed | grep amazon-ssm-agent; then
 else
   if ! [[ -z "${SSM_AGENT_VERSION}" ]]; then
     echo "Installing amazon-ssm-agent@${SSM_AGENT_VERSION} from S3"
-    sudo dnf install -y https://s3.${BINARY_BUCKET_REGION}.${S3_DOMAIN}/amazon-ssm-${BINARY_BUCKET_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
+    sudo dnf install -y https://s3.${AWS_REGION}.${S3_DOMAIN}/amazon-ssm-${AWS_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
   else
     SSM_AGENT_VERSION="latest"
     echo "Installing amazon-ssm-agent@${SSM_AGENT_VERSION} from S3"
-    sudo dnf install -y https://s3.${BINARY_BUCKET_REGION}.${S3_DOMAIN}/amazon-ssm-${BINARY_BUCKET_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
+    sudo dnf install -y https://s3.${AWS_REGION}.${S3_DOMAIN}/amazon-ssm-${AWS_REGION}/${SSM_AGENT_VERSION}/linux_${ARCH}/amazon-ssm-agent.rpm
   fi
 fi
 
