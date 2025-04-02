@@ -20,20 +20,6 @@ BINARY_BUCKET_NAME="${4:-amazon-eks}"    # Default to amazon-eks if not provided
 export AWS_DEFAULT_REGION=$BINARY_BUCKET_REGION
 export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
 
-# Set S3 domain based on region
-S3_DOMAIN="amazonaws.com"
-if [ "$BINARY_BUCKET_REGION" = "cn-north-1" ] || [ "$BINARY_BUCKET_REGION" = "cn-northwest-1" ]; then
-  S3_DOMAIN="amazonaws.com.cn"
-elif [ "$BINARY_BUCKET_REGION" = "us-iso-east-1" ] || [ "$BINARY_BUCKET_REGION" = "us-iso-west-1" ]; then
-  S3_DOMAIN="c2s.ic.gov"
-elif [ "$BINARY_BUCKET_REGION" = "us-isob-east-1" ]; then
-  S3_DOMAIN="sc2s.sgov.gov"
-elif [ "$BINARY_BUCKET_REGION" = "eu-isoe-west-1" ]; then
-  S3_DOMAIN="cloud.adc-e.uk"
-elif [ "$BINARY_BUCKET_REGION" = "us-isof-south-1" ]; then
-  S3_DOMAIN="csp.hci.ic.gov"
-fi
-
 # Handle GovCloud regions
 if [[ "$BINARY_BUCKET_NAME" == "amazon-eks" ]] && [[ "$BINARY_BUCKET_REGION" =~ (us-gov-east-1|us-gov-west-1) ]]; then
     QUERY_REGION="us-west-2"
