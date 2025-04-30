@@ -12,11 +12,10 @@ fi
 export AWS_DEFAULT_REGION="${AWS_REGION}"
 export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
 
-# Create directory for RPMs
+# Create directory for RPMs and GPG keys
 sudo mkdir -p /tmp/nvidia
+sudo mkdir -p /tmp/nvidia/gpgkeys
 cd /tmp/nvidia
-
-RETAIN_NVIDIA_RPM=false
 
 if [ -z "${S3_URL_NVIDIA_RPMS:-}" ]; then
   # Set up repositories only if we're not using S3
@@ -31,6 +30,14 @@ if [ -z "${S3_URL_NVIDIA_RPMS:-}" ]; then
 
   # Enable EPEL repository for RHEL 8
   if [ "$OS_VERSION" = "8" ]; then
+    # Download and import EPEL GPG key
+    sudo curl -o /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-8 https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+    sudo rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-8
+
+    # Save EPEL GPG key to our keys directory
+    sudo cp /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-8 /tmp/nvidia/gpgkeys/
+
+    # Now install EPEL release package
     sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
   fi
 
@@ -40,7 +47,19 @@ if [ -z "${S3_URL_NVIDIA_RPMS:-}" ]; then
   else
     ARCH=sbsa
   fi
+
+  # Add NVIDIA repository and import GPG keys
   sudo dnf config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/$DISTRO/$ARCH/cuda-$DISTRO.repo
+
+  echo http://developer.download.nvidia.com/compute/cuda/repos/$DISTRO/$ARCH/cuda-$DISTRO.repo
+  echo https://developer.download.nvidia.com/compute/cuda/repos/$DISTRO/$ARCH/D42D0685.pub
+  
+  # Save NVIDIA GPG key
+  sudo curl -o /tmp/nvidia/gpgkeys/NVIDIA-keyring.gpg https://developer.download.nvidia.com/compute/cuda/repos/$DISTRO/$ARCH/D42D0685.pub
+  sudo rpm --import /tmp/nvidia/gpgkeys/NVIDIA-keyring.gpg
+  
+  # Save EPEL GPG key
+  sudo cp /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-8 /tmp/nvidia/gpgkeys/
 
   # Download packages with dependencies
   echo "Downloading packages..."
@@ -49,9 +68,18 @@ if [ -z "${S3_URL_NVIDIA_RPMS:-}" ]; then
   sudo dnf download --resolve --downloadonly --downloaddir=/tmp/nvidia cuda-toolkit
   sudo dnf download --resolve --downloadonly --downloaddir=/tmp/nvidia nvidia-container-toolkit
 else
-  # Copy packages from S3 if S3_URL_NVIDIA_RPMS is provided
-  echo "Copying packages from S3..."
+  # Copy packages and GPG keys from S3 if S3_URL_NVIDIA_RPMS is provided
+  echo "Copying packages and GPG keys from S3..."
   aws s3 cp "$S3_URL_NVIDIA_RPMS" /tmp/nvidia --recursive
+  
+  # Import GPG keys from the downloaded directory
+  if [ -d "/tmp/nvidia/gpgkeys" ]; then
+    for key in /tmp/nvidia/gpgkeys/*; do
+      if [ -f "$key" ]; then
+        sudo rpm --import "$key"
+      fi
+    done
+  fi
 fi
 
 # Install the downloaded packages
@@ -64,9 +92,9 @@ sudo nvidia-ctk runtime configure --runtime=containerd
 echo "NVIDIA driver installation completed."
 
 # Clean up /tmp/nvidia unless RETAIN_NVIDIA_RPM is true
-if [ "$RETAIN_NVIDIA_RPM" = true ]; then
-  echo "Keeping NVIDIA RPMs in /tmp/nvidia for potential future use."
+if [ "$RETAIN_NVIDIA_RPM" == "true" ]; then
+  echo "Keeping NVIDIA RPMs and GPG keys in /tmp/nvidia for potential future use."
 else
-  echo "Cleaning up NVIDIA RPMs from /tmp/nvidia..."
+  echo "Cleaning up NVIDIA RPMs and GPG keys from /tmp/nvidia..."
   sudo rm -rf /tmp/nvidia
 fi
