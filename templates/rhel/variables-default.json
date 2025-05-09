@@ -28,7 +28,7 @@
     "remote_folder": "/tmp",
     "runc_version": "*",
     "security_group_id": "",
-    "source_ami_filter_name": "RHEL-8.9.0_HVM-*",
+    "source_ami_filter_name": "RHEL-8.10.0_HVM-*",
     "source_ami_id": "",
     "source_ami_owners": "309956199498",
     "ssh_interface": "",

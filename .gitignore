@@ -6,3 +6,4 @@
 site/
 .git-commit
 nodegroups/cf-template-*.yaml
+*.wasm

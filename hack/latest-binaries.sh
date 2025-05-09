@@ -22,7 +22,7 @@ fi
 
 # retrieve the available "VERSION/BUILD_DATE" prefixes (e.g. "1.28.1/2023-09-14")
 # from the binary object keys, sorted in descending semver order, and pick the first one
-LATEST_BINARIES=$(aws s3api list-objects-v2 "${NO_SIGN_REQUEST}" --region "${BINARY_BUCKET_REGION}" --bucket "${BINARY_BUCKET_NAME}" --prefix "${MINOR_VERSION}" --query 'Contents[*].[Key]' --output text | grep linux | cut -d'/' -f-2 | sort -Vru | head -n1)
+LATEST_BINARIES=$(aws s3api list-objects-v2 "${NO_SIGN_REQUEST}" --region "${BINARY_BUCKET_REGION}" --bucket "${BINARY_BUCKET_NAME}" --prefix "${MINOR_VERSION}" --query 'Contents[*].[Key]' --output text | grep linux | cut -d'/' -f-2 | sort -Vru | sed -n 1p)
 
 if [ "${LATEST_BINARIES}" == "None" ]; then
   echo >&2 "No binaries available for minor version: ${MINOR_VERSION}"

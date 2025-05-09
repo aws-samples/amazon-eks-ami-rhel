@@ -90,6 +90,30 @@ PACKER_ARGS := -var-file $(PACKER_DEFAULT_VARIABLE_FILE) \
 validate: ## Validate packer config
 	@echo "PACKER_TEMPLATE_FILE: $(PACKER_TEMPLATE_FILE)"
 	@echo "PACKER_ARGS: $(PACKER_ARGS)"
+	# Check containerd and RHEL version compatibility
+	@echo "Verifying containerd and RHEL version compatibility..."
+	@containerd_version=$$(if echo "$(PACKER_ARGS)" | grep -q 'containerd_version='; then \
+		echo "$(PACKER_ARGS)" | grep -o 'containerd_version=[^[:space:]]*' | cut -d'=' -f2; \
+	else \
+		jq -r '.containerd_version' $(PACKER_DEFAULT_VARIABLE_FILE); \
+	fi) && \
+	rhel_filter_name=$$(if echo "$(PACKER_ARGS)" | grep -q 'source_ami_filter_name='; then \
+		echo "$(PACKER_ARGS)" | grep -o 'source_ami_filter_name=[^[:space:]]*' | cut -d'=' -f2; \
+	else \
+		jq -r '.source_ami_filter_name' $(PACKER_DEFAULT_VARIABLE_FILE); \
+	fi) && \
+	rhel_full_version=$$(echo "$$rhel_filter_name" | grep -oE 'RHEL-[0-9]+\.[0-9]+' | sed 's/RHEL-//') && \
+	rhel_major_version=$$(echo "$$rhel_full_version" | cut -d '.' -f 1) && \
+	if [ "$$containerd_version" = "*" ] && [ $$rhel_major_version -lt 9 ]; then \
+		echo "Error: Wildcard value (*) for containerd_version is only allowed with RHEL version 9 or higher (current: $$rhel_full_version) due to GNU C Library (glibc) version requirement"; \
+		exit 1; \
+	elif [ "$$containerd_version" != "*" ]; then \
+		containerd_major_version=$$(echo "$$containerd_version" | cut -d '.' -f 1 | grep -oE '[0-9]+') && \
+		if [ $$containerd_major_version -ge 2 ] && [ $$rhel_major_version -lt 9 ]; then \
+			echo "Error: When containerd_version is 2 or greater (current: $$containerd_version), RHEL version must be 9 or higher (current: $$rhel_full_version)  due to GNU C Library (glibc) version requirement"; \
+			exit 1; \
+		fi; \
+	fi
 	$(PACKER_BINARY) validate $(PACKER_ARGS) $(PACKER_TEMPLATE_FILE)
 
 .PHONY: k8s
