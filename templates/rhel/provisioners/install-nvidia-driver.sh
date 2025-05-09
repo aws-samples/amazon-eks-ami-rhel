@@ -63,10 +63,10 @@ if [ -z "${S3_URL_NVIDIA_RPMS:-}" ]; then
 
   # Download packages with dependencies
   echo "Downloading packages..."
-  sudo dnf download --resolve --downloadonly --downloaddir=/tmp/nvidia dkms kernel-devel kernel-modules-extra unzip gcc make vulkan-devel libglvnd-devel elfutils-libelf-devel xorg-x11-server-Xorg
-  sudo dnf download --resolve --downloadonly --downloaddir=/tmp/nvidia $(dnf module list nvidia-driver:latest-dkms -y | grep nvidia-driver | awk '{print $1}')
-  sudo dnf download --resolve --downloadonly --downloaddir=/tmp/nvidia cuda-toolkit
-  sudo dnf download --resolve --downloadonly --downloaddir=/tmp/nvidia nvidia-container-toolkit
+  sudo dnf download --resolve --downloadonly --alldeps --downloaddir=/tmp/nvidia dkms kernel-devel kernel-modules-extra unzip gcc make vulkan-devel libglvnd-devel elfutils-libelf-devel xorg-x11-server-Xorg
+  sudo dnf download --resolve --downloadonly --alldeps --downloaddir=/tmp/nvidia $(dnf module list nvidia-driver:latest-dkms -y | grep nvidia-driver | awk '{print $1}')
+  sudo dnf download --resolve --downloadonly --alldeps --downloaddir=/tmp/nvidia cuda-toolkit
+  sudo dnf download --resolve --downloadonly --alldeps --downloaddir=/tmp/nvidia nvidia-container-toolkit
 else
   # Copy packages and GPG keys from S3 if S3_URL_NVIDIA_RPMS is provided
   echo "Copying packages and GPG keys from S3..."
