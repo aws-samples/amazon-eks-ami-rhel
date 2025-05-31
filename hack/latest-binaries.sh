@@ -14,10 +14,15 @@ AWS_REGION="${2}"
 BINARY_BUCKET_REGION="${3}"
 BINARY_BUCKET_NAME="${4}"
 
+export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+
 # pass in the --no-sign-request flag if crossing partitions from a us-gov region to a non us-gov region
 NO_SIGN_REQUEST=""
 if [[ "${AWS_REGION}" == *"us-gov"* ]] && [[ "${BINARY_BUCKET_REGION}" != *"us-gov"* ]]; then
   NO_SIGN_REQUEST="--no-sign-request"
+else
+  # Only set this not in GovCloud
+  export AWS_DEFAULT_REGION=$BINARY_BUCKET_REGION
 fi
 
 # retrieve the available "VERSION/BUILD_DATE" prefixes (e.g. "1.28.1/2023-09-14")
