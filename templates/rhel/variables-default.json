@@ -23,7 +23,7 @@
     "launch_block_device_mappings_volume_size": "20",
     "nerdctl_url": "https://api.github.com/repos/containerd/nerdctl/releases",
     "nerdctl_version": "*",
-    "nodeadm_build_image": "public.ecr.aws/eks-distro-build-tooling/golang:1.23",
+    "nodeadm_build_image": "public.ecr.aws/eks-distro-build-tooling/golang:1.24",
     "pause_container_image": "602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/pause:3.10",
     "remote_folder": "/tmp",
     "runc_version": "*",

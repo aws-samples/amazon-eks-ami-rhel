@@ -14,7 +14,8 @@ AWS_REGION="${2}"
 BINARY_BUCKET_REGION="${3}"
 BINARY_BUCKET_NAME="${4}"
 
-export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+# Commenting this out for now as it breaks the build when kicking off from non-AL2023/RHEL machines. Uncomment to use with those Operating Systems
+#export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
 
 # pass in the --no-sign-request flag if crossing partitions from a us-gov region to a non us-gov region
 NO_SIGN_REQUEST=""
