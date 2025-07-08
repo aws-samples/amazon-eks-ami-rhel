@@ -14,8 +14,11 @@ AWS_REGION="${2}"
 BINARY_BUCKET_REGION="${3}"
 BINARY_BUCKET_NAME="${4}"
 
-# Commenting this out for now as it breaks the build when kicking off from non-AL2023/RHEL machines. Uncomment to use with those Operating Systems
-#export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+# Only set this env var, if the file exists. This will allow the script to be ran on non RHEL/AL machines.
+# This is needed because the AWS CLI cert bundle isnt trusted in the ADCs.
+if [ -f "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem" ]; then
+    export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+fi
 
 # pass in the --no-sign-request flag if crossing partitions from a us-gov region to a non us-gov region
 NO_SIGN_REQUEST=""
