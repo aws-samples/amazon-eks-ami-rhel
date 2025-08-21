@@ -235,6 +235,14 @@
     {
       "type": "shell",
       "remote_folder": "{{ user `remote_folder`}}",
+      "script": "{{template_dir}}/provisioners/fix-nodeadm-service.sh",
+      "environment_vars": [ 
+	    "WORKING_DIR={{user `working_dir`}}"
+      ]
+    }, 
+    {
+      "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
       "script": "{{template_dir}}/provisioners/cache-pause-container.sh",
       "environment_vars": [
         "AWS_ACCESS_KEY_ID={{user `aws_access_key_id`}}",
