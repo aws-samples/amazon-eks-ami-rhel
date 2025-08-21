@@ -35,8 +35,7 @@ fi
 
 # If cloud-init > 24.4, fix systemd service.
 if echo "$cloud_init_version $test_version" | awk '{ exit !( $1>=$2)}' ; then
-	$dosudo sed -i 's/WantedBy=multi-user.target/WantedBy=cloud-init.target/g' $path_to_systemd
-        $dosudo fix_nodeadmrun_service $path_to_systemd
+      	$dosudo sed -i 's/WantedBy=multi-user.target/WantedBy=cloud-init.target/g' $path_to_systemd
         $dosudo systemctl daemon-reload
         $dosudo systemctl disable nodeadm-run.service
         $dosudo systemctl enable nodeadm-run.service
