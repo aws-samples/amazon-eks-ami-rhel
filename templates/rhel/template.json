@@ -35,6 +35,8 @@
     "remote_folder": null,
     "runc_version": null,
     "security_group_id": null,
+    "soci_url": null,
+    "soci_version": null,
     "source_ami_filter_name": null,
     "source_ami_id": null,
     "source_ami_owners": null,
@@ -190,7 +192,7 @@
     {
       "type": "shell",
       "expect_disconnect": true,
-      "script": "{{template_dir}}/provisioners/limit-c-states.sh",
+      "script": "{{template_dir}}/../shared/provisioners/limit-c-states.sh",
       "environment_vars": [
         "ENABLE_EFA={{user `enable_efa`}}"
       ]
@@ -215,6 +217,8 @@
         "NERDCTL_URL={{user `nerdctl_url`}}",
         "NERDCTL_VERSION={{user `nerdctl_version`}}",
         "RUNC_VERSION={{user `runc_version`}}",
+        "SOCI_URL={{user `soci_url`}}",
+        "SOCI_VERSION={{user `soci_version`}}",
         "SSM_AGENT_VERSION={{user `ssm_agent_version`}}",
         "WORKING_DIR={{user `working_dir`}}"
       ]
@@ -285,6 +289,11 @@
       "inline": [
         "sudo rm -rf {{user `working_dir`}}"
       ]
+    },
+    {
+      "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
+      "script": "{{template_dir}}/provisioners/configure-selinux.sh"
     }
   ],
   "post-processors": [

@@ -31,6 +31,8 @@ validate_env_set KUBERNETES_VERSION
 validate_env_set NERDCTL_URL
 validate_env_set NERDCTL_VERSION
 validate_env_set RUNC_VERSION
+validate_env_set SOCI_URL
+validate_env_set SOCI_VERSION
 validate_env_set WORKING_DIR
 
 ################################################################################
@@ -58,6 +60,7 @@ sudo dnf update -y
 sudo dnf install -y \
   chrony \
   conntrack \
+  nftables \
   ethtool \
   ipvsadm \
   jq \
@@ -82,25 +85,6 @@ sudo dnf install -y iptables
 
 # Mask udev triggers installed by amazon-ec2-net-utils package
 sudo touch /etc/udev/rules.d/99-vpc-policy-routes.rules
-
-# Make networkd ignore foreign settings, else it may unexpectedly delete IP rules and routes added by CNI
-sudo mkdir -p /usr/lib/systemd/networkd.conf.d/
-cat << EOF | sudo tee /usr/lib/systemd/networkd.conf.d/80-release.conf
-# Do not clobber any routes or rules added by CNI.
-[Network]
-ManageForeignRoutes=no
-ManageForeignRoutingPolicyRules=no
-EOF
-
-# Temporary fix for https://github.com/aws/amazon-vpc-cni-k8s/pull/2118
-sudo mkdir -p /etc/systemd/network/99-default.link.d/
-cat << EOF | sudo tee /etc/systemd/network/99-default.link.d/99-no-policy.conf
-# Ensure MACAddressPolicy=none, reinstalling systemd-udev writes /usr/lib/systemd/network/99-default.link
-# with value set to persistent
-# https://github.com/aws/amazon-vpc-cni-k8s/issues/2103#issuecomment-1321698870
-[Link]
-MACAddressPolicy=none
-EOF
 
 ################################################################################
 ### SSH ########################################################################
@@ -176,6 +160,9 @@ fi
 sudo systemctl daemon-reload
 sudo systemctl enable --now containerd
 
+# generate and store containerd version in file /etc/eks/containerd-version.txt
+containerd --version | sudo tee /etc/eks/containerd-version.txt
+
 sudo systemctl enable ebs-initialize-bin@containerd
 
 ###############################################################################
@@ -228,6 +215,7 @@ sudo mkdir -p /var/lib/kubelet
 sudo mkdir -p /opt/cni/bin
 
 echo "Downloading binaries from: s3://$BINARY_BUCKET_NAME"
+AWS_DOMAIN=$(imds "/latest/meta-data/services/domain")
 S3_DOMAIN="amazonaws.com"
 if [ "$BINARY_BUCKET_REGION" = "cn-north-1" ] || [ "$BINARY_BUCKET_REGION" = "cn-northwest-1" ]; then
   S3_DOMAIN="amazonaws.com.cn"
@@ -243,29 +231,25 @@ fi
 S3_URL_BASE="https://$BINARY_BUCKET_NAME.s3.$BINARY_BUCKET_REGION.$S3_DOMAIN/$KUBERNETES_VERSION/$KUBERNETES_BUILD_DATE/bin/linux/$ARCH"
 S3_PATH="s3://$BINARY_BUCKET_NAME/$KUBERNETES_VERSION/$KUBERNETES_BUILD_DATE/bin/linux/$ARCH"
 
-# pass in the --no-sign-request flag if crossing partitions from a us-gov region to a non us-gov region
-NO_SIGN_REQUEST=""
-if [[ "$AWS_REGION" == *"us-gov"* ]] && [[ "$BINARY_BUCKET_REGION" != *"us-gov"* ]]; then
-  NO_SIGN_REQUEST="--no-sign-request"
-fi
-
 BINARIES=(
   kubelet
 )
-for binary in ${BINARIES[*]}; do
-  if [ "$AWS_CREDS_OK" = "true" ]; then
-    echo "AWS credentials present - using them to copy binaries from s3."
-    aws s3 cp --region $BINARY_BUCKET_REGION $NO_SIGN_REQUEST $S3_PATH/$binary .
-    aws s3 cp --region $BINARY_BUCKET_REGION $NO_SIGN_REQUEST $S3_PATH/$binary.sha256 .
-  else
-    echo "AWS credentials missing - using wget to fetch binaries from s3. Note: This won't work for private bucket."
-    sudo wget $S3_URL_BASE/$binary
-    sudo wget $S3_URL_BASE/$binary.sha256
-  fi
+for binary in "${BINARIES[@]}"; do
+  FILES=(
+    "$binary"
+    "$binary.sha256"
+  )
+  for file in "${FILES[@]}"; do
+    if ! aws s3 cp --region $BINARY_BUCKET_REGION "$S3_PATH/$file" .; then
+      echo "Fetching ${file} from s3 failed, trying again with unauthenticated request."
+      aws s3 cp --no-sign-request --region $BINARY_BUCKET_REGION "$S3_PATH/$file" .
+    fi
+  done
+
   sudo sha256sum -c $binary.sha256
   sudo chmod +x $binary
   sudo chown root:root $binary
-  sudo mv $binary /usr/bin/
+  sudo mv --context $binary /usr/bin/
 done
 
 sudo rm ./*.sha256
@@ -281,17 +265,73 @@ sudo systemctl enable ebs-initialize-bin@kubelet
 
 ECR_CREDENTIAL_PROVIDER_BINARY="ecr-credential-provider"
 
-if [ "$AWS_CREDS_OK" = "true" ]; then
-  echo "AWS credentials present - using them to copy ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3."
-  aws s3 cp --region $BINARY_BUCKET_REGION $NO_SIGN_REQUEST $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
-else
-  echo "AWS credentials missing - using wget to fetch ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3. Note: This won't work for private bucket."
-  sudo wget "$S3_URL_BASE/$ECR_CREDENTIAL_PROVIDER_BINARY"
+if ! aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .; then
+  echo "Fetching ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3 failed, trying again with unauthenticated request."
+  aws s3 cp --no-sign-request --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
 fi
 
 sudo chmod +x $ECR_CREDENTIAL_PROVIDER_BINARY
 sudo mkdir -p /etc/eks/image-credential-provider
 sudo mv $ECR_CREDENTIAL_PROVIDER_BINARY /etc/eks/image-credential-provider/
+
+###############################################################################
+### SOCI Snapshotter ##########################################################
+###############################################################################
+
+# Use an RPM URL to install soci-snapshotter
+if [[ "$SOCI_URL" == *.rpm ]]; then
+  echo "Installing soci-snapshotter RPM from: $SOCI_URL"
+  # TODO: Add GPG keys for these repos.
+  sudo dnf install -y $SOCI_URL --nogpgcheck 
+  # Create symlink if needed
+  if [ -f "/usr/local/bin/soci" ]; then
+    if [ ! -e "/usr/bin/soci" ]; then
+      sudo ln -s /usr/local/bin/soci /usr/bin/soci
+      echo "Symlink created: /usr/bin/soci -> /usr/local/bin/soci"
+    else
+      echo "A file or symlink already exists at /usr/bin/soci. No action taken."
+    fi
+  fi
+  if [ -f "/usr/local/bin/soci-snapshotter-grpc" ]; then
+    if [ ! -e "/usr/bin/soci-snapshotter-grpc" ]; then
+      sudo ln -s /usr/local/bin/soci-snapshotter-grpc /usr/bin/soci-snapshotter-grpc
+      echo "Symlink created: /usr/bin/soci-snapshotter-grpc -> /usr/local/bin/soci-snapshotter-grpc"
+    else
+      echo "A file or symlink already exists at /usr/bin/soci-snapshotter-grpc. No action taken."
+    fi
+  fi
+else
+  # Download soci-snapshotter tarball from S3 if an S3 URI is specified in the SOCI_URL environment variable
+  if [[ "$SOCI_URL" == s3://* ]]; then
+    echo "Downloading soci-snapshotter from: $SOCI_URL"
+    aws s3 cp $SOCI_URL .
+  else
+    if [ "$SOCI_VERSION" == "*" ]; then
+      SOCI_URL=$SOCI_URL"/latest"
+    else
+      SOCI_URL=$SOCI_URL"/tags/v"$SOCI_VERSION
+    fi
+    SOCI_VERSION=$(curl -s $SOCI_URL | jq -r '.tag_name[1:]')
+    SOCI_DOWNLOAD_URL=$(curl -s "$SOCI_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/soci-snapshotter-'$SOCI_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+    sudo wget $SOCI_DOWNLOAD_URL
+  fi
+  sudo tar Cxzvvf /usr/local/bin soci-snapshotter*.tar.gz
+  
+  # Create symlinks in /usr/bin for easier access
+  if [ -f "/usr/local/bin/soci" ]; then
+    if [ ! -e "/usr/bin/soci" ]; then
+      sudo ln -s /usr/local/bin/soci /usr/bin/soci
+      echo "Symlink created: /usr/bin/soci -> /usr/local/bin/soci"
+    fi
+  fi
+  if [ -f "/usr/local/bin/soci-snapshotter-grpc" ]; then
+    if [ ! -e "/usr/bin/soci-snapshotter-grpc" ]; then
+      sudo ln -s /usr/local/bin/soci-snapshotter-grpc /usr/bin/soci-snapshotter-grpc
+      echo "Symlink created: /usr/bin/soci-snapshotter-grpc -> /usr/local/bin/soci-snapshotter-grpc"
+    fi
+  fi
+fi
+
 
 ################################################################################
 ### SSM Agent ##################################################################
@@ -335,11 +375,3 @@ sudo sed -i \
 # https://github.com/containerd/containerd/issues/8197
 # this was fixed in 1.2.x of libcni but containerd < 2.x are using libcni 1.1.x
 sudo systemctl enable cni-cache-reset
-
-################################################################################
-### Change SELinux context for binaries ########################################
-################################################################################
-sudo semanage fcontext -a -t bin_t -s system_u "/etc/eks(/.*)?"
-sudo restorecon -R -vF /etc/eks
-sudo semanage fcontext -a -t kubelet_exec_t -s system_u /usr/bin/kubelet
-sudo restorecon -vF /usr/bin/kubelet

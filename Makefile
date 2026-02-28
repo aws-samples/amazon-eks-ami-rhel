@@ -14,9 +14,9 @@ K8S_VERSION_MINOR := $(word 1,${K8S_VERSION_PARTS}).$(word 2,${K8S_VERSION_PARTS
 
 AMI_VARIANT ?= amazon-eks
 AMI_VERSION ?= v$(shell date '+%Y%m%d')
+aws_region ?= us-west-2
 os_distro ?= rhel
 arch ?= x86_64
-aws_region ?= us-west-2
 binary_bucket_region ?= us-west-2
 binary_bucket_name ?= amazon-eks
 
@@ -54,9 +54,13 @@ fmt: ## Format the source files
 	hack/shfmt --write
 
 .PHONY: lint
-lint: lint-docs ## Check the source files for syntax and format issues
+lint: lint-docs lint-code
+  # Convenience target to run all lints. This is not run during presubmits, add new checks in lint-docs or lint-code.
+
+.PHONY: lint-code
+lint-code: ## Check the source files for syntax and format issues
 	hack/shfmt --diff
-	hack/shellcheck --format gcc --severity error $(shell find $(MAKEFILE_DIR) -type f -name '*.sh' -not -path '*/nodeadm/vendor/*')
+	hack/shellcheck --format gcc --severity warning
 	hack/lint-space-errors.sh
 
 .PHONY: test

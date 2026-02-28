@@ -63,7 +63,7 @@ type ModifyInstanceAttributeInput struct {
 	// attached. The volume must be owned by the caller. If no value is specified for
 	// DeleteOnTermination , the default is true and the volume is deleted when the
 	// instance is terminated. You can't modify the DeleteOnTermination attribute for
-	// volumes that are attached to Fargate tasks.
+	// volumes that are attached to Amazon Web Services-managed resources.
 	//
 	// To add instance store volumes to an Amazon EBS-backed instance, you must add
 	// them when you launch the instance. For more information, see [Update the block device mapping when launching an instance]in the Amazon EC2
@@ -257,16 +257,13 @@ func (c *Client) addOperationModifyInstanceAttributeMiddlewares(stack *middlewar
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addSpanInitializeStart(stack); err != nil {
+	if err = addInterceptBeforeRetryLoop(stack, options); err != nil {
 		return err
 	}
-	if err = addSpanInitializeEnd(stack); err != nil {
+	if err = addInterceptAttempt(stack, options); err != nil {
 		return err
 	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
+	if err = addInterceptors(stack, options); err != nil {
 		return err
 	}
 	return nil

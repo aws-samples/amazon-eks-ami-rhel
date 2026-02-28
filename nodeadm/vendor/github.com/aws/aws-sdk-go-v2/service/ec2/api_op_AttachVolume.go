@@ -80,13 +80,18 @@ type AttachVolumeInput struct {
 	// UnauthorizedOperation .
 	DryRun *bool
 
+	// The index of the EBS card. Some instance types support multiple EBS cards. The
+	// default EBS card index is 0.
+	EbsCardIndex *int32
+
 	noSmithyDocumentSerde
 }
 
 // Describes volume attachment details.
 type AttachVolumeOutput struct {
 
-	// The ARN of the Amazon ECS or Fargate task to which the volume is attached.
+	// The ARN of the Amazon Web Services-managed resource to which the volume is
+	// attached.
 	AssociatedResource *string
 
 	// The time stamp when the attachment initiated.
@@ -97,18 +102,25 @@ type AttachVolumeOutput struct {
 
 	// The device name.
 	//
-	// If the volume is attached to a Fargate task, this parameter returns null .
+	// If the volume is attached to an Amazon Web Services-managed resource, this
+	// parameter returns null .
 	Device *string
+
+	// The index of the EBS card. Some instance types support multiple EBS cards. The
+	// default EBS card index is 0.
+	EbsCardIndex *int32
 
 	// The ID of the instance.
 	//
-	// If the volume is attached to a Fargate task, this parameter returns null .
+	// If the volume is attached to an Amazon Web Services-managed resource, this
+	// parameter returns null .
 	InstanceId *string
 
-	// The service principal of Amazon Web Services service that owns the underlying
-	// instance to which the volume is attached.
+	// The service principal of the Amazon Web Services service that owns the
+	// underlying resource to which the volume is attached.
 	//
-	// This parameter is returned only for volumes that are attached to Fargate tasks.
+	// This parameter is returned only for volumes that are attached to Amazon Web
+	// Services-managed resources.
 	InstanceOwningService *string
 
 	// The attachment state of the volume.
@@ -211,16 +223,13 @@ func (c *Client) addOperationAttachVolumeMiddlewares(stack *middleware.Stack, op
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addSpanInitializeStart(stack); err != nil {
+	if err = addInterceptBeforeRetryLoop(stack, options); err != nil {
 		return err
 	}
-	if err = addSpanInitializeEnd(stack); err != nil {
+	if err = addInterceptAttempt(stack, options); err != nil {
 		return err
 	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
+	if err = addInterceptors(stack, options); err != nil {
 		return err
 	}
 	return nil

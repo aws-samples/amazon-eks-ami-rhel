@@ -45,12 +45,24 @@ DisabledMount specifies a directory that should not be mounted onto local storag
 
 * `Containerd` refers to `/var/lib/containerd`
 * `PodLogs` refers to `/var/log/pods`
+* `SOCI` refers to `/var/lib/soci-snapshotter-grpc`
 
 _Appears in:_
 - [LocalStorageOptions](#localstorageoptions)
 
 .Validation:
-- Enum: [Containerd PodLogs]
+- Enum: [Containerd PodLogs SOCI]
+
+#### EnvironmentOptions
+
+_Underlying type:_ _object_
+
+EnvironmentOptions configures environment variables for the system and systemd services.
+The key `default` is reserved for configuring the environment across all services on the instance
+The key can be set to a systemd service name to configure environment only for a particular service.
+
+_Appears in:_
+- [InstanceOptions](#instanceoptions)
 
 #### Feature
 
@@ -62,7 +74,7 @@ _Appears in:_
 - [NodeConfigSpec](#nodeconfigspec)
 
 .Validation:
-- Enum: [InstanceIdNodeName]
+- Enum: [InstanceIdNodeName FastImagePull]
 
 #### InstanceOptions
 
@@ -74,6 +86,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `localStorage` _[LocalStorageOptions](#localstorageoptions)_ |  |
+| `environment` _[EnvironmentOptions](#environmentoptions)_ |  |
+| `network` _[NetworkOptions](#networkoptions)_ |  |
 
 #### KubeletOptions
 
@@ -86,6 +100,7 @@ _Appears in:_
 | --- | --- |
 | `config` _object (keys:string, values:[RawExtension](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#rawextension-runtime-pkg))_ | Config is a [`KubeletConfiguration`](https://kubernetes.io/docs/reference/config-api/kubelet-config.v1beta1/)<br />that will be merged with the defaults. |
 | `flags` _string array_ | Flags are [command-line `kubelet` arguments](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/).<br />that will be appended to the defaults. |
+| `maxPodsExpression` _string_ | MaxPodsExpression is a CEL expression used to compute a max pods value for<br />the kubelet configuration. Any MaxPods value set in Config takes precedence<br />over the result of this expression. If the expression is successfully evaluated,<br />kubeReserved will always be calculated on its result. |
 
 #### LocalStorageOptions
 
@@ -112,6 +127,18 @@ _Appears in:_
 
 .Validation:
 - Enum: [RAID0 RAID10 Mount]
+
+#### NetworkOptions
+
+NetworkOptions are parameters used to configure networking on the host OS.
+
+_Appears in:_
+- [InstanceOptions](#instanceoptions)
+
+| Field | Description |
+| --- | --- |
+| `nameservers` _string array_ | Nameservers are servers for the instance's network name resolution. The<br />list may include both IPv4 and IPv6 addresses.<br />see: https://www.freedesktop.org/software/systemd/man/latest/resolved.conf.html#DNS= |
+| `domains` _string array_ | Domains are search entries for the instance's network name resolution.<br />see: https://www.freedesktop.org/software/systemd/man/latest/resolved.conf.html#Domains= |
 
 #### NodeConfig
 
