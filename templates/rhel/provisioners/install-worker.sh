@@ -278,60 +278,69 @@ sudo mv $ECR_CREDENTIAL_PROVIDER_BINARY /etc/eks/image-credential-provider/
 ### SOCI Snapshotter ##########################################################
 ###############################################################################
 
-# Use an RPM URL to install soci-snapshotter
-if [[ "$SOCI_URL" == *.rpm ]]; then
-  echo "Installing soci-snapshotter RPM from: $SOCI_URL"
-  # TODO: Add GPG keys for these repos.
-  sudo dnf install -y $SOCI_URL --nogpgcheck 
-  # Create symlink if needed
-  if [ -f "/usr/local/bin/soci" ]; then
-    if [ ! -e "/usr/bin/soci" ]; then
-      sudo ln -s /usr/local/bin/soci /usr/bin/soci
-      echo "Symlink created: /usr/bin/soci -> /usr/local/bin/soci"
-    else
-      echo "A file or symlink already exists at /usr/bin/soci. No action taken."
-    fi
-  fi
-  if [ -f "/usr/local/bin/soci-snapshotter-grpc" ]; then
-    if [ ! -e "/usr/bin/soci-snapshotter-grpc" ]; then
-      sudo ln -s /usr/local/bin/soci-snapshotter-grpc /usr/bin/soci-snapshotter-grpc
-      echo "Symlink created: /usr/bin/soci-snapshotter-grpc -> /usr/local/bin/soci-snapshotter-grpc"
-    else
-      echo "A file or symlink already exists at /usr/bin/soci-snapshotter-grpc. No action taken."
-    fi
-  fi
-else
-  # Download soci-snapshotter tarball from S3 if an S3 URI is specified in the SOCI_URL environment variable
-  if [[ "$SOCI_URL" == s3://* ]]; then
-    echo "Downloading soci-snapshotter from: $SOCI_URL"
-    aws s3 cp $SOCI_URL .
-  else
-    if [ "$SOCI_VERSION" == "*" ]; then
-      SOCI_URL=$SOCI_URL"/latest"
-    else
-      SOCI_URL=$SOCI_URL"/tags/v"$SOCI_VERSION
-    fi
-    SOCI_VERSION=$(curl -s $SOCI_URL | jq -r '.tag_name[1:]')
-    SOCI_DOWNLOAD_URL=$(curl -s "$SOCI_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/soci-snapshotter-'$SOCI_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
-    sudo wget $SOCI_DOWNLOAD_URL
-  fi
-  sudo tar Cxzvvf /usr/local/bin soci-snapshotter*.tar.gz
+# SOCI requires higher versions of glibc, only install on RHEL 9+
+RHEL_VERSION=$(rpm -E %{rhel})
+if [ "$RHEL_VERSION" -ge 9 ]; then
+  echo "RHEL version $RHEL_VERSION detected, installing SOCI snapshotter"
   
-  # Create symlinks in /usr/bin for easier access
-  if [ -f "/usr/local/bin/soci" ]; then
-    if [ ! -e "/usr/bin/soci" ]; then
-      sudo ln -s /usr/local/bin/soci /usr/bin/soci
-      echo "Symlink created: /usr/bin/soci -> /usr/local/bin/soci"
+  # Use an RPM URL to install soci-snapshotter
+  if [[ "$SOCI_URL" == *.rpm ]]; then
+    echo "Installing soci-snapshotter RPM from: $SOCI_URL"
+    # TODO: Add GPG keys for these repos.
+    sudo dnf install -y $SOCI_URL --nogpgcheck 
+    # Create symlink if needed
+    if [ -f "/usr/local/bin/soci" ]; then
+      if [ ! -e "/usr/bin/soci" ]; then
+        sudo ln -s /usr/local/bin/soci /usr/bin/soci
+        echo "Symlink created: /usr/bin/soci -> /usr/local/bin/soci"
+      else
+        echo "A file or symlink already exists at /usr/bin/soci. No action taken."
+      fi
+    fi
+    if [ -f "/usr/local/bin/soci-snapshotter-grpc" ]; then
+      if [ ! -e "/usr/bin/soci-snapshotter-grpc" ]; then
+        sudo ln -s /usr/local/bin/soci-snapshotter-grpc /usr/bin/soci-snapshotter-grpc
+        echo "Symlink created: /usr/bin/soci-snapshotter-grpc -> /usr/local/bin/soci-snapshotter-grpc"
+      else
+        echo "A file or symlink already exists at /usr/bin/soci-snapshotter-grpc. No action taken."
+      fi
+    fi
+  else
+    # Download soci-snapshotter tarball from S3 if an S3 URI is specified in the SOCI_URL environment variable
+    if [[ "$SOCI_URL" == s3://* ]]; then
+      echo "Downloading soci-snapshotter from: $SOCI_URL"
+      aws s3 cp $SOCI_URL .
+    else
+      if [ "$SOCI_VERSION" == "*" ]; then
+        SOCI_URL=$SOCI_URL"/latest"
+      else
+        SOCI_URL=$SOCI_URL"/tags/v"$SOCI_VERSION
+      fi
+      SOCI_VERSION=$(curl -s $SOCI_URL | jq -r '.tag_name[1:]')
+      SOCI_DOWNLOAD_URL=$(curl -s "$SOCI_URL" | jq -r '.assets[] | select(.browser_download_url | endswith("/soci-snapshotter-'$SOCI_VERSION'-linux-'$ARCH'.tar.gz")) | .browser_download_url')
+      sudo wget $SOCI_DOWNLOAD_URL
+    fi
+    sudo tar Cxzvvf /usr/local/bin soci-snapshotter*.tar.gz
+    
+    # Create symlinks in /usr/bin for easier access
+    if [ -f "/usr/local/bin/soci" ]; then
+      if [ ! -e "/usr/bin/soci" ]; then
+        sudo ln -s /usr/local/bin/soci /usr/bin/soci
+        echo "Symlink created: /usr/bin/soci -> /usr/local/bin/soci"
+      fi
+    fi
+    if [ -f "/usr/local/bin/soci-snapshotter-grpc" ]; then
+      if [ ! -e "/usr/bin/soci-snapshotter-grpc" ]; then
+        sudo ln -s /usr/local/bin/soci-snapshotter-grpc /usr/bin/soci-snapshotter-grpc
+        echo "Symlink created: /usr/bin/soci-snapshotter-grpc -> /usr/local/bin/soci-snapshotter-grpc"
+      fi
     fi
   fi
-  if [ -f "/usr/local/bin/soci-snapshotter-grpc" ]; then
-    if [ ! -e "/usr/bin/soci-snapshotter-grpc" ]; then
-      sudo ln -s /usr/local/bin/soci-snapshotter-grpc /usr/bin/soci-snapshotter-grpc
-      echo "Symlink created: /usr/bin/soci-snapshotter-grpc -> /usr/local/bin/soci-snapshotter-grpc"
-    fi
-  fi
+  sudo systemctl daemon-reload
+  sudo systemctl enable soci-snapshotter
+else
+  echo "RHEL version $RHEL_VERSION detected, skipping SOCI snapshotter installation (requires RHEL 9+)"
 fi
-
 
 ################################################################################
 ### SSM Agent ##################################################################
