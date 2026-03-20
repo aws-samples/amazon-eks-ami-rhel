@@ -116,7 +116,9 @@
         "container_selinux_version": "{{ user `container_selinux_version`}}",
         "containerd_version": "{{ user `containerd_version`}}",
         "kubernetes": "{{ user `kubernetes_version`}}/{{ user `kubernetes_build_date` }}/bin/linux/{{ user `arch` }}",
-        "ssm_agent_version": "{{ user `ssm_agent_version`}}"
+        "ssm_agent_version": "{{ user `ssm_agent_version`}}",
+        "amazon_eks_ami_rhel_repo": "https://github.com/aws-samples/amazon-eks-ami-rhel.git",
+        "amazon_eks_ami_rhel_repo_commit_hash": "7df18f0ecc550bcba7adfd53410acbfb0423e22e"
       },
       "ami_name": "{{user `ami_name`}}",
       "ami_description": "{{ user `ami_description` }}, {{ user `ami_component_description` }}",
@@ -203,7 +205,7 @@
       "script": "{{template_dir}}/provisioners/install-worker.sh",
       "environment_vars": [
         "AWS_ACCESS_KEY_ID={{user `aws_access_key_id`}}",
-	"AWS_CLI_URL={{user `aws_cli_url`}}",
+        "AWS_CLI_URL={{user `aws_cli_url`}}",
         "AWS_REGION={{user `aws_region`}}",
         "AWS_SECRET_ACCESS_KEY={{user `aws_secret_access_key`}}",
         "AWS_SESSION_TOKEN={{user `aws_session_token`}}",
@@ -294,6 +296,11 @@
       "type": "shell",
       "remote_folder": "{{ user `remote_folder`}}",
       "script": "{{template_dir}}/provisioners/configure-selinux.sh"
+    },
+    {
+      "type": "shell",
+      "remote_folder": "{{ user `remote_folder`}}",
+      "script": "{{template_dir}}/provisioners/fix-nodeadm-cloudinit-ordering.sh"
     }
   ],
   "post-processors": [

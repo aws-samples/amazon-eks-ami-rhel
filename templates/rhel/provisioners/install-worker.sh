@@ -3,6 +3,7 @@
 set -o pipefail
 set -o nounset
 set -o errexit
+
 IFS=$'\n\t'
 export AWS_DEFAULT_OUTPUT="json"
 
@@ -53,8 +54,15 @@ fi
 ### Packages ###################################################################
 ################################################################################
 
+sudo yum install -y \
+  yum-utils \
+  yum-plugin-versionlock
+
 # Update the OS to begin with to catch up to the latest packages.
-sudo dnf update -y
+sudo dnf update -y --nobest
+
+# lock the version of the kernel and associated packages before we yum update
+sudo yum versionlock kernel-$(uname -r) kernel-headers-$(uname -r) kernel-devel-$(uname -r)
 
 # Install necessary packages
 sudo dnf install -y \
@@ -70,7 +78,16 @@ sudo dnf install -y \
   unzip \
   wget \
   mdadm \
-  pigz
+  pigz \
+  bind-utils \
+  iputils \
+  mtr \
+  nmap-ncat \
+  rh-amazon-rhui-client \
+  lsof \
+  tcpdump \
+  sos \
+  rsync
 
 export AWS_DEFAULT_REGION=$AWS_REGION
 export AWS_CA_BUNDLE="/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
@@ -215,7 +232,7 @@ sudo mkdir -p /var/lib/kubelet
 sudo mkdir -p /opt/cni/bin
 
 echo "Downloading binaries from: s3://$BINARY_BUCKET_NAME"
-AWS_DOMAIN=$(imds "/latest/meta-data/services/domain")
+AWS_DOMAIN=$(sudo imds "/latest/meta-data/services/domain")
 S3_DOMAIN="amazonaws.com"
 if [ "$BINARY_BUCKET_REGION" = "cn-north-1" ] || [ "$BINARY_BUCKET_REGION" = "cn-northwest-1" ]; then
   S3_DOMAIN="amazonaws.com.cn"
@@ -234,27 +251,41 @@ S3_PATH="s3://$BINARY_BUCKET_NAME/$KUBERNETES_VERSION/$KUBERNETES_BUILD_DATE/bin
 BINARIES=(
   kubelet
 )
+echo "Entering Script Changes to use wget rather than aws s3 cp to get EKS binaries."
 for binary in "${BINARIES[@]}"; do
   FILES=(
-    "$binary"
+    "$binary.gz"
+    "$binary.gz.sha256"
     "$binary.sha256"
   )
+  # Force wget when crossing partition boundaries (e.g., GovCloud <-> Commercial)
+  USE_WGET=false
+  if [[ "$AWS_REGION" == *"us-gov"* ]] && [[ "$BINARY_BUCKET_REGION" != *"us-gov"* ]]; then
+    echo "Cross-partition access detected (GovCloud -> Commercial). Using wget to fetch binaries from s3."
+    USE_WGET=true
+  fi
   for file in "${FILES[@]}"; do
-    if ! aws s3 cp --region $BINARY_BUCKET_REGION "$S3_PATH/$file" .; then
-      echo "Fetching ${file} from s3 failed, trying again with unauthenticated request."
-      aws s3 cp --no-sign-request --region $BINARY_BUCKET_REGION "$S3_PATH/$file" .
+    if [ "$AWS_CREDS_OK" = "true" ] && [ "$USE_WGET" = "false" ]; then
+      echo "AWS credentials present - using them to copy binaries from s3."
+      sudo aws s3 cp --region $BINARY_BUCKET_REGION "$S3_PATH/$file" .
+    else
+      echo "Fetching ${file} from s3 using wget"
+      sudo wget "$S3_URL_BASE/$file"
     fi
   done
 
+  sudo sha256sum -c $binary.gz.sha256
+  sudo gunzip $binary.gz
   sudo sha256sum -c $binary.sha256
   sudo chmod +x $binary
   sudo chown root:root $binary
-  sudo mv --context $binary /usr/bin/
+  sudo mv $binary /usr/bin/
+  sudo restorecon -vF /usr/bin/$binary
 done
 
 sudo rm ./*.sha256
 
-kubelet --version > "${WORKING_DIR}/kubelet-version.txt"
+sudo kubelet --version > "${WORKING_DIR}/kubelet-version.txt"
 sudo mv "${WORKING_DIR}/kubelet-version.txt" /etc/eks/kubelet-version.txt
 
 sudo systemctl enable ebs-initialize-bin@kubelet
@@ -264,12 +295,24 @@ sudo systemctl enable ebs-initialize-bin@kubelet
 ################################################################################
 
 ECR_CREDENTIAL_PROVIDER_BINARY="ecr-credential-provider"
+FILES=(
+  "$ECR_CREDENTIAL_PROVIDER_BINARY.sha256"
+  "$ECR_CREDENTIAL_PROVIDER_BINARY.gz"
+  "$ECR_CREDENTIAL_PROVIDER_BINARY.gz.sha256"   
+)
+for file in "${FILES[@]}"; do
+  if [ "$AWS_CREDS_OK" = "true" ] && [ "$USE_WGET" = "false" ]; then
+    echo "AWS credentials present - using them to copy ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3."
+    sudo aws s3 cp --region $BINARY_BUCKET_REGION "$S3_PATH/$file" .
+  else
+    echo "Fetching ${file} from s3 using wget"
+    sudo wget "$S3_URL_BASE/$file"
+  fi
+done
 
-if ! aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .; then
-  echo "Fetching ${ECR_CREDENTIAL_PROVIDER_BINARY} from s3 failed, trying again with unauthenticated request."
-  aws s3 cp --no-sign-request --region $BINARY_BUCKET_REGION $S3_PATH/$ECR_CREDENTIAL_PROVIDER_BINARY .
-fi
-
+sudo sha256sum -c "$ECR_CREDENTIAL_PROVIDER_BINARY.gz.sha256"
+sudo gunzip "$ECR_CREDENTIAL_PROVIDER_BINARY.gz"
+sudo sha256sum -c "$ECR_CREDENTIAL_PROVIDER_BINARY.sha256"
 sudo chmod +x $ECR_CREDENTIAL_PROVIDER_BINARY
 sudo mkdir -p /etc/eks/image-credential-provider
 sudo mv $ECR_CREDENTIAL_PROVIDER_BINARY /etc/eks/image-credential-provider/
@@ -363,7 +406,7 @@ fi
 ### AMI Metadata ###############################################################
 ################################################################################
 
-BASE_AMI_ID=$($WORKING_DIR/shared/bin/imds /latest/meta-data/ami-id)
+BASE_AMI_ID=$(sudo $WORKING_DIR/shared/bin/imds /latest/meta-data/ami-id)
 cat << EOF | sudo tee /etc/eks/release
 BASE_AMI_ID="$BASE_AMI_ID"
 BUILD_TIME="$(date)"
