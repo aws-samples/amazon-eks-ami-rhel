@@ -4,10 +4,17 @@ set -o pipefail
 set -o nounset
 
 validate_directory_selinux_contexts() {
-  local DIR=$1
+  local DIR="$1"
   echo "Validating SELinux contexts in $DIR"
 
-  unverified_files=$(matchpathcon -V $DIR/* | grep -v verified)
+  # Skip if directory does not exist
+  if [ ! -d "$DIR" ]; then
+    echo "Directory $DIR does not exist, skipping validation"
+    return 0
+  fi
+
+  unverified_files=$(sudo find "$DIR" -mindepth 1 -maxdepth 1 \
+    -exec matchpathcon -V {} + 2>/dev/null | grep -v verified)
 
   if [ -n "$unverified_files" ]; then
     echo "$unverified_files"

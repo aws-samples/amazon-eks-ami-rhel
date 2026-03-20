@@ -16,7 +16,7 @@ sudo rpm --query --all --queryformat '\{"%{NAME}": "%{VERSION}-%{RELEASE}"\}\n' 
 
 # kernel modules
 for modname in $(sudo lsmod | cut -d' ' -f 1 | tail -n +2); do
-  MOD_VERSION=$(sudo modinfo ${modname} --field version)
+  MOD_VERSION=$(sudo modinfo ${modname} --field version 2>/dev/null || true)
   if [ -n "$MOD_VERSION" ]; then
     echo "$(jq ".kernel_modules.${modname} = \"$MOD_VERSION\"" $OUTPUT_FILE)" > $OUTPUT_FILE
   fi
