@@ -22,7 +22,6 @@ export LC_ALL="C"
 # Global options
 readonly PROGRAM_VERSION="0.7.9"
 readonly PROGRAM_SOURCE="https://github.com/aws-samples/amazon-eks-ami-rhel/blob/main/log-collector-script/"
-readonly PROGRAM_NAME="$(basename "$0" .sh)"
 readonly PROGRAM_DIR="/opt/log-collector"
 readonly LOG_DIR="/var/log"
 readonly COLLECT_DIR="/tmp/eks-log-collector"
@@ -646,7 +645,12 @@ get_network_policy_ebpf_info() {
     echo "*** EBPF loaded data ***" >> "${COLLECT_DIR}"/networking/ebpf-data.txt
     LOADED_EBPF=$(/opt/cni/bin/aws-eks-na-cli ebpf loaded-ebpfdata | tee -a "${COLLECT_DIR}"/networking/ebpf-data.txt)
 
-    for mapid in $(echo "$LOADED_EBPF" | grep "Map ID:" | sed 's/Map ID: \+//' | sort | uniq); do
+    for mapid in $(echo "$LOADED_EBPF" | grep -E 'Map Name:[[:space:]]*(cp_ingress_map|cp_egress_map)' -A1 | grep "Map ID:" | sed 's/Map ID: \+//' | sort | uniq); do
+      echo "*** EBPF Maps Data for Map ID $mapid ***" >> "${COLLECT_DIR}"/networking/ebpf-cp-maps-data.txt
+      /opt/cni/bin/aws-eks-na-cli ebpf dump-cp-maps $mapid >> "${COLLECT_DIR}"/networking/ebpf-cp-maps-data.txt
+    done
+
+    for mapid in $(echo "$LOADED_EBPF" | grep -E 'Map Name:[[:space:]]*(ingress_map|egress_map)' -A1 | grep "Map ID:" | sed 's/Map ID: \+//' | sort | uniq); do
       echo "*** EBPF Maps Data for Map ID $mapid ***" >> "${COLLECT_DIR}"/networking/ebpf-maps-data.txt
       /opt/cni/bin/aws-eks-na-cli ebpf dump-maps $mapid >> "${COLLECT_DIR}"/networking/ebpf-maps-data.txt
     done

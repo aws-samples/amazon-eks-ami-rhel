@@ -30,7 +30,7 @@
     "security_group_id": "",
     "soci_url": "https://api.github.com/repos/awslabs/soci-snapshotter/releases",
     "soci_version": "*",
-    "source_ami_filter_name": "RHEL-8.10.0_HVM-*",
+    "source_ami_filter_name": "RHEL-8*_HVM-*",
     "source_ami_id": "",
     "source_ami_owners": "309956199498",
     "ssh_interface": "",
@@ -41,5 +41,6 @@
     "user_data_file": null,
     "volume_type": "gp3",
     "vpc_id": "",
-    "working_dir": "{{user `remote_folder`}}/worker"
+    "working_dir": "{{user `remote_folder`}}/worker",
+    "custom_endpoint_ec2": ""
 }

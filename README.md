@@ -1,4 +1,7 @@
-# Amazon EKS AMI RHEL Build Specification
+# Amazon EKS RHEL AMI Build Specification
+> [!IMPORTANT]
+> - A new parameter was added to the Makefile to show the RHEL version in the AMI name. Rather than making this dynamic and accounting for all different AMI source naming conventions, this is user defined through a *rhel_version* parameter, defaulting to 8.10.
+> - To remain in sync with the upstream EKS AMI GitHub repo, the executable files and scripts that were previously in the shared provisioners directory, have been moved to the rhel directory.
 
 This repository contains resources and configuration scripts for building a
 custom Amazon EKS AMI running on Red Hat Enterprise Linux with [HashiCorp Packer](https://www.packer.io/). This is
@@ -7,25 +10,6 @@ a forked version of the configuration that Amazon EKS uses to create the officia
 **Check out the [📖 documentation](https://aws-samples.github.io/amazon-eks-ami-rhel/) to learn more.**
 
 ---
-
-## 🔔 Announcements
-
-### November 23, 2024 - Pause container image caching requires IAM credentials
-
-Pause container image caching was [readded to the upstream build process](https://github.com/awslabs/amazon-eks-ami/pull/2000). This requires a few configurations for the build to complete successfully:
-* Proper configuration of the new ```pause_container_image``` parameter. You can find the AWS managed regional repository using the [documented list](https://docs.aws.amazon.com/eks/latest/userguide/add-ons-images.html).
-* IAM credentials with permissions to read from AWS managed ECR repositories.
-  * These credentials can either be passed in via API keys or (recommended) you can attach an IAM Instance Profile during the build process by passing in the ```iam_instance_profile``` parameter.
-  
-Example commands with the ```pause_container_image``` and ```iam_instance_profile``` parameters configured can be found below.
- 
-### March 6, 2024 - This code base now follows the Amazon Linux 2023 custom EKS AMI code base
-
-This code base has always followed the [awslabs amazon-eks-ami](https://github.com/awslabs/amazon-eks-ami) code base as closely as possible.
-* Significant changes were made to that upstream code base to provide EKS support for Amazon Linux 2023.
-* Because Amazon Linux 2 is now under extended support, this code base will now follow the Amazon Linux 2023 code base of the upstream repository.
-* The [scripts for creating worker node groups](https://aws-samples.github.io/amazon-eks-ami-rhel/nodegroups/) have been modified to account for how worker nodes join EKS clusters under the new process.
-* The previous code base, which was based on Amazon Linux 2 build scripts, will remain available under the [al2-base branch](https://github.com/aws-samples/amazon-eks-ami-rhel/tree/al2-base).
 
 ## 🚀 Getting started
 

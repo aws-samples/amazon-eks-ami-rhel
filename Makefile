@@ -16,9 +16,21 @@ AMI_VARIANT ?= amazon-eks
 AMI_VERSION ?= v$(shell date '+%Y%m%d')
 aws_region ?= us-west-2
 os_distro ?= rhel
+rhel_version ?= 8.10
 arch ?= x86_64
 binary_bucket_region ?= us-west-2
 binary_bucket_name ?= amazon-eks
+
+BUILD_TARGETS := build k8s validate
+
+ifneq ($(filter $(BUILD_TARGETS),$(MAKECMDGOALS)),)
+ifndef os_distro
+$(error os_distro is required (e.g., os_distro=rhel))
+endif
+ifndef k8s
+$(error k8s is required (e.g., k8s=1.35))
+endif
+endif
 
 ifeq ($(os_distro), rhel)
 	AMI_VARIANT := $(AMI_VARIANT)-rhel
@@ -33,7 +45,8 @@ ifeq ($(enable_fips), true)
 	AMI_VARIANT := $(AMI_VARIANT)-fips
 endif
 
-ami_name ?= $(AMI_VARIANT)-node-$(K8S_VERSION_MINOR)-$(AMI_VERSION)
+
+ami_name ?= $(AMI_VARIANT)-node-$(rhel_version)-$(K8S_VERSION_MINOR)-$(AMI_VERSION)
 
 # ami owner overrides for cn/gov-cloud
 ifeq ($(aws_region), cn-northwest-1)
@@ -41,9 +54,6 @@ ifeq ($(aws_region), cn-northwest-1)
 else ifneq ($(filter $(aws_region),us-gov-west-1 us-gov-east-1),)
 	source_ami_owners ?= 219670896067
 endif
-
-# default to the latest supported Kubernetes version
-k8s=1.28
 
 .PHONY: build
 build: ## Build EKS Optimized RHEL AMI
@@ -62,10 +72,6 @@ lint-code: ## Check the source files for syntax and format issues
 	hack/shfmt --diff
 	hack/shellcheck --format gcc --severity warning
 	hack/lint-space-errors.sh
-
-.PHONY: test
-test: ## run the test-harness
-	templates/test/test-harness.sh
 
 PACKER_BINARY ?= packer
 PACKER_TEMPLATE_DIR ?= templates/$(os_distro)
@@ -124,33 +130,6 @@ validate: ## Validate packer config
 k8s: validate ## Build default K8s version of EKS Optimized AMI
 	@echo "Building AMI [os_distro=$(os_distro) kubernetes_version=$(kubernetes_version) arch=$(arch)]"
 	$(PACKER_BINARY) build -timestamp-ui -color=false $(PACKER_ARGS) $(PACKER_TEMPLATE_FILE)
-
-# DEPRECATION NOTICE: `make` targets for each Kubernetes minor version will not be added after 1.28
-# Use the `k8s` variable to specify a minor version instead
-
-.PHONY: 1.23
-1.23: ## Build EKS Optimized AMI - K8s 1.23 - DEPRECATED: use the `k8s` variable instead
-	$(MAKE) k8s $(shell hack/latest-binaries.sh 1.23)
-
-.PHONY: 1.24
-1.24: ## Build EKS Optimized AMI - K8s 1.24 - DEPRECATED: use the `k8s` variable instead
-	$(MAKE) k8s $(shell hack/latest-binaries.sh 1.24)
-
-.PHONY: 1.25
-1.25: ## Build EKS Optimized AMI - K8s 1.25 - DEPRECATED: use the `k8s` variable instead
-	$(MAKE) k8s $(shell hack/latest-binaries.sh 1.25)
-
-.PHONY: 1.26
-1.26: ## Build EKS Optimized AMI - K8s 1.26 - DEPRECATED: use the `k8s` variable instead
-	$(MAKE) k8s $(shell hack/latest-binaries.sh 1.26)
-
-.PHONY: 1.27
-1.27: ## Build EKS Optimized AMI - K8s 1.27 - DEPRECATED: use the `k8s` variable instead
-	$(MAKE) k8s $(shell hack/latest-binaries.sh 1.27)
-
-.PHONY: 1.28
-1.28: ## Build EKS Optimized AMI - K8s 1.28 - DEPRECATED: use the `k8s` variable instead
-	$(MAKE) k8s $(shell hack/latest-binaries.sh 1.28)
 
 .PHONY: lint-docs
 lint-docs: ## Lint the docs
