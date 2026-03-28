@@ -132,6 +132,7 @@ echo "AWS credentials available: ${AWS_CREDS_OK}"
 ###############################################################################
 
 sudo dnf install -y runc-${RUNC_VERSION}
+sudo ln -s /usr/bin/runc /usr/sbin/runc
 sudo dnf install -y container-selinux-${CONTAINER_SELINUX_VERSION}
 
 # Use an RPM URL to install containerd
@@ -384,3 +385,19 @@ sudo sed -i \
 # https://github.com/containerd/containerd/issues/8197
 # this was fixed in 1.2.x of libcni but containerd < 2.x are using libcni 1.1.x
 sudo systemctl enable cni-cache-reset
+
+################################################################################
+### Upgrade to cgroupv2 on RHEL8 (default on RHEL9 and 10 ######################
+################################################################################
+
+CGROUP_TYPE=$(stat -fc %T /sys/fs/cgroup/ 2>/dev/null)
+
+if [ "$CGROUP_TYPE" = "tmpfs" ]; then
+  echo "cgroup v1 detected. Enabling cgroup v2..."
+  sudo grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=1"
+  echo "cgroup v2 enabled. Changes will take effect on next reboot."
+elif [ "$CGROUP_TYPE" = "cgroup2fs" ]; then
+  echo "cgroup v2 already enabled. No action needed."
+else
+  echo "Unable to determine cgroup version."
+fi

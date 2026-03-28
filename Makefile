@@ -103,24 +103,28 @@ validate: ## Validate packer config
 	# Check containerd and RHEL version compatibility
 	@echo "Verifying containerd and RHEL version compatibility..."
 	@containerd_version=$$(if echo "$(PACKER_ARGS)" | grep -q 'containerd_version='; then \
-		echo "$(PACKER_ARGS)" | grep -o 'containerd_version=[^[:space:]]*' | cut -d'=' -f2; \
+		echo "$(PACKER_ARGS)" | grep -o "containerd_version='[^']*'" | cut -d"'" -f2; \
 	else \
 		jq -r '.containerd_version' $(PACKER_DEFAULT_VARIABLE_FILE); \
 	fi) && \
 	rhel_filter_name=$$(if echo "$(PACKER_ARGS)" | grep -q 'source_ami_filter_name='; then \
-		echo "$(PACKER_ARGS)" | grep -o 'source_ami_filter_name=[^[:space:]]*' | cut -d'=' -f2; \
+		echo "$(PACKER_ARGS)" | grep -o "source_ami_filter_name='[^']*'" | cut -d"'" -f2; \
 	else \
 		jq -r '.source_ami_filter_name' $(PACKER_DEFAULT_VARIABLE_FILE); \
 	fi) && \
-	rhel_full_version=$$(echo "$$rhel_filter_name" | grep -oE 'RHEL-[0-9]+\.[0-9]+' | sed 's/RHEL-//') && \
-	rhel_major_version=$$(echo "$$rhel_full_version" | cut -d '.' -f 1) && \
+	rhel_version_str=$$(echo "$$rhel_filter_name" | grep -oE 'RHEL[-_](HA-)?[0-9]+(\.[0-9]+)?' | grep -oE '[0-9]+(\.[0-9]+)?' | head -1) && \
+	rhel_major_version=$$(echo "$$rhel_version_str" | cut -d'.' -f1) && \
+	if [ -z "$$rhel_major_version" ]; then \
+		echo "Error: Unable to parse RHEL version from: $$rhel_filter_name"; \
+		exit 1; \
+	fi && \
 	if [ "$$containerd_version" = "*" ] && [ $$rhel_major_version -lt 9 ]; then \
-		echo "Error: Wildcard value (*) for containerd_version is only allowed with RHEL version 9 or higher (current: $$rhel_full_version) due to GNU C Library (glibc) version requirement"; \
+		echo "Error: Wildcard value (*) for containerd_version is only allowed with RHEL version 9 or higher (current: $$rhel_version_str) due to GNU C Library (glibc) version requirement"; \
 		exit 1; \
 	elif [ "$$containerd_version" != "*" ]; then \
 		containerd_major_version=$$(echo "$$containerd_version" | cut -d '.' -f 1 | grep -oE '[0-9]+') && \
-		if [ $$containerd_major_version -ge 2 ] && [ $$rhel_major_version -lt 9 ]; then \
-			echo "Error: When containerd_version is 2 or greater (current: $$containerd_version), RHEL version must be 9 or higher (current: $$rhel_full_version)  due to GNU C Library (glibc) version requirement"; \
+		if [ -n "$$containerd_major_version" ] && [ $$containerd_major_version -ge 2 ] && [ $$rhel_major_version -lt 9 ]; then \
+			echo "Error: When containerd_version is 2 or greater (current: $$containerd_version), RHEL version must be 9 or higher (current: $$rhel_version_str) due to GNU C Library (glibc) version requirement"; \
 			exit 1; \
 		fi; \
 	fi

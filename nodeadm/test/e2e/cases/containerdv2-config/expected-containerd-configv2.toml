@@ -95,7 +95,7 @@ imports = []
           io_type = ''
 
           [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
-            BinaryName = '/usr/bin/runc'
+            BinaryName = '/usr/sbin/runc'
             CriuImagePath = ''
             CriuWorkPath = ''
             IoGid = 0

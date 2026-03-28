@@ -14,7 +14,7 @@ type runtimeConfigMixin interface {
 
 const (
 	defaultRuntimeName       = "runc"
-	defaultRuntimeBinaryPath = "/usr/bin/runc"
+	defaultRuntimeBinaryPath = "/usr/sbin/runc"
 )
 
 var mixins = []runtimeConfigMixin{
